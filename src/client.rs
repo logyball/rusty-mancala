@@ -1,9 +1,10 @@
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, Write, Read};
 use std::net::TcpStream;
 use std::str;
 
 pub fn run_client() {
     let connection = "localhost:42069";
+    let mut buffer_arr = [0; 512];
     match TcpStream::connect(connection) {
         Ok(mut stream) => {
             loop {
@@ -25,10 +26,19 @@ pub fn run_client() {
                     .expect("Server write error");
                 stream.flush().unwrap();
 
-                // Create read stream & read input from server
-                let mut reader = BufReader::new(&stream);
-                reader.read_until(b'\n', &mut buffer).expect("Buffer error");
-                print!("{}", str::from_utf8(&buffer).expect("Buffer->String error"));
+                match stream.read(&mut buffer_arr) {
+                    Ok(size) => {
+                        if size == 0 {
+                            println!("Server terminated connection");
+                            break;
+                        }
+                        let response = str::from_utf8(&buffer_arr[0..size]).unwrap().trim_end();
+                        println!("server response: {}", response);
+                    }
+                    Err(_) => {
+                        println!("server did something bad");
+                    }
+                }
             }
         },
         Err(e) => {
