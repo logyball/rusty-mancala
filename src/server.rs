@@ -6,35 +6,6 @@ use std::thread;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream, Shutdown};
 
-//fn backup() {
-//    let rec: (u32, String) = rec_server_master
-//        .recv()
-//        .expect("didn't get a message or something");
-//    let res_comm_channel = client_comms.get(&rec.0).expect("no id match");
-//    if rec.1 == "kill_me".to_string() {
-//        res_comm_channel
-//            .send((rec.0, "kill".to_string()))
-//            .expect("something wrong");
-//        client_comms.remove(&rec.0);
-//    } else if rec.1 == "give".to_string() {
-//        res_comm_channel
-//            .send((rec.0, user_list[(rec.0 % 5) as usize].to_string()))
-//            .expect("seomthing wrong");
-//    } else if rec.1 == "list".to_string() {
-//        let new_str = user_list
-//            .iter()
-//            .fold(String::new(), |acc, n| acc + n);
-//        res_comm_channel
-//            .send((rec.0, new_str))
-//            .expect("seomthing wrong");
-//    } else if rec.1 == "add_me".to_string() {
-//        user_list.push(format!("new_user_{}", rec.0));
-//        res_comm_channel
-//            .send((rec.0, String::new()))
-//            .expect("seomthing wrong");
-//    }
-//}
-
 fn handle_each_client(
     mut stream: TcpStream,
     snd_channel: &Arc<Mutex<mpsc::Sender<(u32, String)>>>,
