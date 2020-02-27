@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, BufReader, Write, Read};
+use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::str;
 
@@ -9,17 +9,11 @@ pub fn run_client() {
         Ok(mut stream) => {
             loop {
                 let mut input = String::new();
-                let mut buffer: Vec<u8> = Vec::new();
-
-                // Read input from user
                 io::stdin().read_line(&mut input).expect("I/O error");
-
-                // Exit loop & terminate connection if user enters "quit"
                 if input.trim_end().eq_ignore_ascii_case("quit") {
                     println!("Goodbye!");
                     break;
                 }
-
                 // Write user input to server
                 stream
                     .write_all(input.as_bytes())
@@ -40,7 +34,7 @@ pub fn run_client() {
                     }
                 }
             }
-        },
+        }
         Err(e) => {
             println!("Failed to connect: {}", e);
         }
