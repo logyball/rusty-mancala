@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 bincode = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-rand = "*"
+simple_logger = "1.6.0"
+log = "*"
