@@ -1,5 +1,10 @@
+#[macro_use]
+extern crate log;
+extern crate simple_logger;
+
 use std::{env, process};
 mod client;
+mod proto;
 mod server;
 
 fn main() {
@@ -8,7 +13,7 @@ fn main() {
         panic!("error: too few args");
     }
     if args[1] == "s" {
-        println!("run server");
+        simple_logger::init().unwrap();
         server::run_server();
     }
     if args[1] == "c" {

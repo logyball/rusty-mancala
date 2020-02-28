@@ -1,55 +1,22 @@
-use std::collections::HashMap;
+use crate::proto::*;
+
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
-use std::str;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
-type MsgChanSender = mpsc::Sender<(u32, InternalMessage)>;
-type MsgChanReceiver = mpsc::Receiver<(u32, InternalMessage)>;
+pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
+pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
 
-#[derive(Debug, Clone, PartialEq)]
-enum InternalMessageType {
-    Read,
-    Write,
-    Response,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct InternalMessageBody {
-    get_data: String,
-    write_data: String,
-    response_data: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct InternalMessage {
-    type_of_msg: InternalMessageType,
-    body: InternalMessageBody,
-}
-
-fn handle_client_input(buffer: &[u8; 512], id: u32, size: usize) -> InternalMessage {
-    let input = str::from_utf8(&buffer[0..size]).unwrap().trim_end(); // evenutally deserialize a proto mmessage
-    println!("TCP data received: {}", input);
-    if input == "add_me" {
-        InternalMessage {
-            type_of_msg: InternalMessageType::Write,
-            body: InternalMessageBody {
-                get_data: String::new(),
-                write_data: id.to_string(),
-                response_data: String::new(),
-            },
-        }
-    } else {
-        InternalMessage {
-            type_of_msg: InternalMessageType::Read,
-            body: InternalMessageBody {
-                get_data: "List".to_string(),
-                write_data: String::new(),
-                response_data: String::new(),
-            },
-        }
+fn handle_client_input(buffer: &[u8; 512], size: usize) -> Msg {
+    let client_msg: Msg = bincode::deserialize(&buffer[0..size]).unwrap();
+    info!("TCP data received: {:?}", client_msg);
+    if client_msg.status != Status::Ok {
+        // TODO - some sort of error checking
+        ()
     }
+    client_msg
 }
 
 fn handle_each_client(
@@ -63,25 +30,26 @@ fn handle_each_client(
         match stream.read(&mut buffer) {
             Ok(size) => {
                 if size == 0 {
-                    println!("Client terminated connection");
+                    info!("Client terminated connection");
                     break;
                 }
-                let msg_to_send_to_manager: InternalMessage =
-                    handle_client_input(&buffer, user_id, size);
+                let msg_to_send_to_manager: Msg =
+                    handle_client_input(&buffer, size);
                 snd_channel
                     .lock()
                     .unwrap()
                     .send((user_id, msg_to_send_to_manager))
                     .unwrap();
-                let response_from_manager: (u32, InternalMessage) =
+                let response_from_manager: (u32, Msg) =
                     rec_channel.recv().expect("something wrong");
+                response_from_manager.1.serialize(&mut buffer);
                 stream
-                    .write_all(response_from_manager.1.body.response_data.as_bytes())
+                    .write_all(&buffer)
                     .unwrap();
                 stream.flush().unwrap();
             }
             Err(_) => {
-                println!(
+                error!(
                     "An error occurred, terminating connection with {}",
                     stream.peer_addr().unwrap()
                 );
@@ -91,122 +59,150 @@ fn handle_each_client(
     }
 }
 
-fn manager(
-    cli_comms: &Arc<Mutex<HashMap<u32, MsgChanSender>>>,
+fn data_manager(
+    cli_comms: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     rec_server_master: MsgChanReceiver,
-    user_list: Arc<Mutex<Vec<String>>>,
+    game_list_mutex: Arc<Mutex<Vec<String>>>,
+    active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
+    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
 ) {
     loop {
-        let rec: (u32, InternalMessage) = rec_server_master
+        let rec: (u32, Msg) = rec_server_master
             .recv()
             .expect("didn't get a message or something");
         let cli_com_base = cli_comms.lock().unwrap();
         let res_comm_channel = cli_com_base.get(&rec.0).expect("no id match");
-        if rec.1.type_of_msg == InternalMessageType::Read {
-            println!("recieved some read message");
-            let user_list_unlocked = user_list.lock().unwrap();
-            let user_list_string = user_list_unlocked
+        // TODO - separate into read/write
+        let cmd: Commands = rec.1.command;
+        if cmd == Commands::ListGames {
+            let game_list_unlocked = game_list_mutex.lock().unwrap();
+            let game_list_string: String = game_list_unlocked
                 .iter()
-                .fold(String::new(), |acc, x| acc + x + ", ");
-            res_comm_channel
-                .send((
-                    rec.0,
-                    InternalMessage {
-                        type_of_msg: InternalMessageType::Response,
-                        body: InternalMessageBody {
-                            get_data: String::new(),
-                            write_data: String::new(),
-                            response_data: user_list_string + "\0",
-                        },
-                    },
-                ))
-                .expect("seomthing wrong");
-        } else if rec.1.type_of_msg == InternalMessageType::Write {
-            let mut user_list_unlocked = user_list.lock().unwrap();
-            user_list_unlocked.push(rec.1.body.write_data.clone());
-            let user_added_str = format!("User Successfully added: {}", rec.1.body.write_data);
-            res_comm_channel
-                .send((
-                    rec.0,
-                    InternalMessage {
-                        type_of_msg: InternalMessageType::Response,
-                        body: InternalMessageBody {
-                            get_data: String::new(),
-                            write_data: String::new(),
-                            response_data: user_added_str + "\0",
-                        },
-                    },
-                ))
-                .expect("seomthing wrong");
-        } else {
-            res_comm_channel
-                .send((
-                    rec.0,
-                    InternalMessage {
-                        type_of_msg: InternalMessageType::Response,
-                        body: InternalMessageBody {
-                            get_data: String::new(),
-                            write_data: String::new(),
-                            response_data: "Command Not Recognized".to_string() + "\0",
-                        },
-                    },
-                ))
-                .expect("seomthing wrong");
+                .fold("Available Games: \n".to_string(), |acc, x| acc + x);
+            let server_res: Msg = Msg {
+                status: Status::Ok,
+                headers: Headers::Response,
+                command: Commands::Reply,
+                data: game_list_string
+            };
+            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+        }
+        else if cmd == Commands::ListUsers {
+            let active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
+            let active_nicks_string: String = active_nicks_unlocked
+                .iter()
+                .fold("Active Users: \n".to_string(), |acc, x| acc + x + "\n ");
+            let server_res: Msg = Msg {
+                status: Status::Ok,
+                headers: Headers::Response,
+                command: Commands::Reply,
+                data: active_nicks_string
+            };
+            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+        }
+        else if cmd == Commands::SetNick {
+            let nickname = rec.1.data;
+            let mut active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
+            if active_nicks_unlocked.contains(&nickname) {
+                let server_res: Msg = Msg {
+                    status: Status::NotOk,
+                    headers: Headers::Response,
+                    command: Commands::Reply,
+                    data: "nickname already in use".to_string()
+                };
+                res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+            } else {
+                let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
+                id_nick_map_unlocked.insert(rec.0, nickname.clone());
+                active_nicks_unlocked.insert(nickname.clone());
+                let server_res: Msg = Msg {
+                    status: Status::Ok,
+                    headers: Headers::Response,
+                    command: Commands::Reply,
+                    data: format!("nickname: {} set", nickname.clone())
+                };
+                res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+            }
+        }
+        else {
+            let server_res: Msg = Msg {
+                status: Status::NotOk,
+                headers: Headers::Response,
+                command: Commands::Reply,
+                data: String::new()
+            };
+            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
         }
     }
 }
 
-fn make_initial_user_list(u: &mut Vec<String>) {
-    u.push("logan".to_string());
-    u.push("belen".to_string());
-    u.push("megan".to_string());
-    u.push("meatloaf".to_string());
-    u.push("rooney".to_string());
+fn set_up_new_client(
+    client_comms_mutex: &Arc<Mutex<HashMap<u32, MsgChanSender>>>,
+    client_to_server_sender: &Arc<Mutex<MsgChanSender>>,
+    cur_id: u32,
+) -> (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) {
+    let (send_server, rec_channel): (MsgChanSender, MsgChanReceiver) = mpsc::channel();
+    client_comms_mutex
+        .lock()
+        .unwrap()
+        .insert(cur_id, send_server);
+    let snd_channel = Arc::clone(&client_to_server_sender);
+    (snd_channel, rec_channel)
 }
 
-pub fn run_server() {
-    let mut user_list: Vec<String> = vec![];
-    make_initial_user_list(&mut user_list);
-    let mut cur_id: u32 = 0;
+fn tcp_connection_manager(
+    client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
+    client_to_server_sender: Arc<Mutex<MsgChanSender>>,
+) {
     let connection = "localhost:42069";
     let listener = TcpListener::bind(connection).unwrap();
+    let mut cur_id: u32 = 0;
 
-    let client_comms: HashMap<u32, MsgChanSender> = HashMap::new();
-    let (send_client_master, rec_server_master): (
-        MsgChanSender,
-        MsgChanReceiver,
-    ) = mpsc::channel();
-
-    let client_to_server_sender = Arc::new(Mutex::new(send_client_master));
-    let client_comms_mutex = Arc::new(Mutex::new(client_comms));
-    let user_list_mutex = Arc::new(Mutex::new(user_list));
-    let client_comms_mutex_copy = Arc::clone(&client_comms_mutex);
-    thread::spawn(move || {
-        manager(&client_comms_mutex_copy, rec_server_master, user_list_mutex);
-    });
-
-    println!("Server listening on port 42069");
+    info!("Server listening on port 42069");
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                println!("New connection: {}", stream.peer_addr().unwrap());
-                let (send_server, rec_channel): (
-                    MsgChanSender,
-                    MsgChanReceiver,
-                ) = mpsc::channel();
-                client_comms_mutex
-                    .lock()
-                    .unwrap()
-                    .insert(cur_id, send_server);
-                let snd_channel = Arc::clone(&client_to_server_sender);
+                info!("New connection: {}", stream.peer_addr().unwrap());
+                let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) =
+                    set_up_new_client(&client_comms_mutex, &client_to_server_sender, cur_id);
                 thread::spawn(move || {
-                    handle_each_client(stream, &snd_channel, &rec_channel, cur_id);
+                    handle_each_client(stream, &channels.0, &channels.1, cur_id);
                 });
                 cur_id += 1;
             }
             Err(e) => {
-                println!("Error: {}", e);
+                error!("Error: {}", e);
             }
         }
     }
+}
+
+pub fn run_server() {
+    let game_list: Vec<String> = vec![];
+    let game_list_mutex = Arc::new(Mutex::new(game_list));
+
+    let active_nicks: HashSet<String> = HashSet::new();
+    let active_nicks_mutex = Arc::new(Mutex::new(active_nicks));
+
+    let id_nick_map: HashMap<u32, String> = HashMap::new();
+    let id_nick_map_mutex = Arc::new(Mutex::new(id_nick_map));
+
+    let (send_client_master, rec_server_master): (MsgChanSender, MsgChanReceiver) = mpsc::channel();
+    let client_to_server_sender = Arc::new(Mutex::new(send_client_master));
+
+    let client_comms: HashMap<u32, MsgChanSender> = HashMap::new();
+    let client_comms_mutex = Arc::new(Mutex::new(client_comms));
+
+    let client_comms_mute_tcp_manager_copy = Arc::clone(&client_comms_mutex);
+    let client_comms_mute_client_manager_copy = Arc::clone(&client_comms_mutex);
+    thread::spawn(move || {
+        data_manager(
+            client_comms_mute_client_manager_copy,
+            rec_server_master,
+            game_list_mutex,
+            active_nicks_mutex,
+            id_nick_map_mutex
+        );
+    });
+    tcp_connection_manager(client_comms_mute_tcp_manager_copy, client_to_server_sender)
 }
