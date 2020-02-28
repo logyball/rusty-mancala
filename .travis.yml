@@ -1,0 +1,11 @@
+language: rust
+rust:
+  - 1.41.0
+
+before_script:
+  - rustup component add rustfmt
+  - rustup component add clippy
+
+script:
+  - cargo clippy
+  - cargo test --verbose
