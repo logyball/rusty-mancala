@@ -1,4 +1,5 @@
 use crate::proto::*;
+use crate::server_input_handler::*;
 
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
@@ -72,67 +73,20 @@ fn data_manager(
             .expect("didn't get a message or something");
         let cli_com_base = cli_comms.lock().unwrap();
         let res_comm_channel = cli_com_base.get(&rec.0).expect("no id match");
-        // TODO - separate into read/write/ingame/outgame
-        let cmd: Commands = rec.1.command;
-        if cmd == Commands::ListGames {
-            let game_list_unlocked = game_list_mutex.lock().unwrap();
-            let game_list_string: String = game_list_unlocked
-                .iter()
-                .fold("Available Games: \n".to_string(), |acc, x| acc + x);
-            let server_res: Msg = Msg {
-                status: Status::Ok,
-                headers: Headers::Response,
-                command: Commands::Reply,
-                data: game_list_string
-            };
+        let status: GameStatus = rec.1.game_status.clone();
+        let cmd: Commands = rec.1.command.clone();
+        if status == GameStatus::NotInGame {
+            let server_res: Msg = handle_out_of_game(
+                cmd,
+                &game_list_mutex,
+                &active_nicks_mutex,
+                &id_nick_map_mutex,
+                &rec.1,
+            rec.0);
             res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+            continue;
         }
-        else if cmd == Commands::ListUsers {
-            let active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
-            let active_nicks_string: String = active_nicks_unlocked
-                .iter()
-                .fold("Active Users: \n".to_string(), |acc, x| acc + x + "\n ");
-            let server_res: Msg = Msg {
-                status: Status::Ok,
-                headers: Headers::Response,
-                command: Commands::Reply,
-                data: active_nicks_string
-            };
-            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
-        }
-        else if cmd == Commands::SetNick {
-            let nickname = rec.1.data;
-            let mut active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
-            if active_nicks_unlocked.contains(&nickname) {
-                let server_res: Msg = Msg {
-                    status: Status::NotOk,
-                    headers: Headers::Response,
-                    command: Commands::Reply,
-                    data: "nickname already in use".to_string()
-                };
-                res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
-            } else {
-                let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
-                id_nick_map_unlocked.insert(rec.0, nickname.clone());
-                active_nicks_unlocked.insert(nickname.clone());
-                let server_res: Msg = Msg {
-                    status: Status::Ok,
-                    headers: Headers::Response,
-                    command: Commands::Reply,
-                    data: format!("nickname: {} set", nickname.clone())
-                };
-                res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
-            }
-        }
-        else {
-            let server_res: Msg = Msg {
-                status: Status::NotOk,
-                headers: Headers::Response,
-                command: Commands::Reply,
-                data: String::new()
-            };
-            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
-        }
+        // else do in-game
     }
 }
 
@@ -211,8 +165,8 @@ pub fn run_server() {
     let client_comms: HashMap<u32, MsgChanSender> = HashMap::new();
     let client_comms_mutex = Arc::new(Mutex::new(client_comms));
 
-    let client_comms_mute_tcp_manager_copy = Arc::clone(&client_comms_mutex);
-    let client_comms_mute_client_manager_copy = Arc::clone(&client_comms_mutex);
+    let client_comms_mutex_tcp_manager_copy = Arc::clone(&client_comms_mutex);
+    let client_comms_mutex_client_manager_copy = Arc::clone(&client_comms_mutex);
     let active_nicks_mutex_data_copy = Arc::clone(&active_nicks_mutex);
     let id_nick_map_mutex_data_copy = Arc::clone(&id_nick_map_mutex);
     let active_nicks_mutex_tcp_copy = Arc::clone(&active_nicks_mutex);
@@ -220,7 +174,7 @@ pub fn run_server() {
 
     thread::spawn(move || {
         data_manager(
-            client_comms_mute_client_manager_copy,
+            client_comms_mutex_client_manager_copy,
             rec_server_master,
             game_list_mutex,
             active_nicks_mutex_data_copy,
@@ -228,7 +182,7 @@ pub fn run_server() {
         );
     });
     tcp_connection_manager(
-        client_comms_mute_tcp_manager_copy,
+        client_comms_mutex_tcp_manager_copy,
         client_to_server_sender,
         active_nicks_mutex_tcp_copy,
         id_nick_map_mutex_tcp_copy

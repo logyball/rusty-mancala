@@ -6,6 +6,8 @@ use std::{env, process};
 mod client;
 mod proto;
 mod server;
+mod server_input_handler;
+mod client_input_handler;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
