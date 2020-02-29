@@ -48,6 +48,7 @@ fn handle_each_client(
                     .write_all(&buffer)
                     .unwrap();
                 stream.flush().unwrap();
+                info!("TCP response sent: {:?}", &response_from_manager.1);
             }
             Err(_) => {
                 error!(

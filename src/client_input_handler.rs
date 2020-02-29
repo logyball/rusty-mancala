@@ -32,7 +32,7 @@ pub fn initial_hello_msg() -> Msg {
     }
 }
 
-pub fn handle_out_of_game(connection: String, user_nick: String) -> Msg {
+pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
     loop {
         let mut stdin = io::stdin();
         let mut selection = String::new();
@@ -46,8 +46,7 @@ pub fn handle_out_of_game(connection: String, user_nick: String) -> Msg {
         (4) Join Game
         (5) Disconnect
 
-    Enter your choice:
-    ", connection, "nickname".to_string());
+    Enter your choice: ", connection, user_nick);
         io::stdout().flush();
         stdin.read_line(&mut selection);
         let selection_int = selection.trim().parse::<u8>();
@@ -72,7 +71,7 @@ pub fn handle_out_of_game(connection: String, user_nick: String) -> Msg {
 //                        return msg
                     }
                     5 => {
-                        let msg = client_disconnect();
+                        let msg = client_disconnect(user_nick);
                         return msg
                     }
                     _ => {
@@ -89,7 +88,7 @@ pub fn handle_out_of_game(connection: String, user_nick: String) -> Msg {
 
 
 // READ functions
-pub fn list_active_games() -> Msg {
+fn list_active_games() -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -99,7 +98,7 @@ pub fn list_active_games() -> Msg {
     }
 }
 
-pub fn list_active_users() -> Msg {
+fn list_active_users() -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -113,7 +112,7 @@ pub fn list_active_users() -> Msg {
 
 
 // WRITE functions
-pub fn set_nickname() -> Msg {
+fn set_nickname() -> Msg {
     let mut stdin = io::stdin();
     let mut nickname = String::new();
     print!("Enter new nickname: ");
@@ -124,7 +123,7 @@ pub fn set_nickname() -> Msg {
         headers: Headers::Write,
         command: Commands::SetNick,
         game_status: GameStatus::NotInGame,
-        data: nickname.trim_end().parse().unwrap()
+        data: nickname.trim().to_string()
     }
 }
 
@@ -132,7 +131,7 @@ pub fn set_nickname() -> Msg {
 //
 //pub fn join_game() -> Msg {}
 
-pub fn client_disconnect() -> Msg {
+fn client_disconnect(user_nick: &str) -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -144,7 +143,15 @@ pub fn client_disconnect() -> Msg {
 
 
 // --------------- in game --------------- //
-pub fn handle_in_game() {}
+pub fn handle_in_game() -> Msg {
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Read,
+        command: Commands::KillMe,
+        game_status: GameStatus::NotInGame,
+        data: String::new()
+    }
+}
 
 // Response to Client
 pub fn clients_turn() {}
@@ -157,3 +164,23 @@ pub fn make_move() {}
 pub fn leave_game() {} // TODO - implement?
 
 pub fn send_message() {} // TODO - implement?
+
+
+// --------------- handle server response --------------- //
+pub fn handle_server_response(server_msg: &Msg, connection: &str, nickname: &mut String) -> Msg {
+    if !server_msg.data.is_empty() {
+        println!("server response: {}", server_msg.data);
+    }
+    if server_msg.command == Commands::SetNick {
+        let new_nick: String = server_msg.data.clone();
+        *nickname = new_nick.clone();
+    }
+    return match server_msg.game_status {
+        GameStatus::NotInGame => {
+            handle_out_of_game(connection, &nickname)
+        }
+        _ => {
+            handle_in_game()
+        }
+    }
+}

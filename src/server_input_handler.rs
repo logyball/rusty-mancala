@@ -23,6 +23,9 @@ pub fn handle_out_of_game(
     else if cmd == Commands::KillMe {
         return client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id);
     }
+    else if cmd == Commands::InitSetup {
+        return initial_setup(id_nick_map_mutex, client_id);
+    }
     Msg {
         status: Status::NotOk,
         headers: Headers::Response,
@@ -34,6 +37,20 @@ pub fn handle_out_of_game(
 
 
 // READ functions
+pub fn initial_setup(
+    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
+    client_id: u32) -> Msg {
+    let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
+    let nickname = id_nick_map_unlocked.get(&client_id).unwrap();
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Response,
+        command: Commands::Reply,
+        game_status: GameStatus::NotInGame,
+        data: format!("{}", nickname)
+    }
+}
+
 pub fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<String>>>) -> Msg {
     let game_list_unlocked = game_list_mutex.lock().unwrap();
     let game_list_string: String = game_list_unlocked
@@ -77,7 +94,7 @@ pub fn set_nickname(
         return Msg {
             status: Status::NotOk,
             headers: Headers::Response,
-            command: Commands::Reply,
+            command: Commands::SetNick,
             game_status: GameStatus::NotInGame,
             data: "nickname already in use".to_string()
         };
@@ -88,9 +105,9 @@ pub fn set_nickname(
         Msg {
             status: Status::Ok,
             headers: Headers::Response,
-            command: Commands::Reply,
+            command: Commands::SetNick,
             game_status: GameStatus::NotInGame,
-            data: format!("nickname: {} set", nickname.clone())
+            data: format!("{}", nickname.clone())
         }
     }
 }
