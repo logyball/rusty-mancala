@@ -72,7 +72,7 @@ fn data_manager(
             .expect("didn't get a message or something");
         let cli_com_base = cli_comms.lock().unwrap();
         let res_comm_channel = cli_com_base.get(&rec.0).expect("no id match");
-        // TODO - separate into read/write
+        // TODO - separate into read/write/ingame/outgame
         let cmd: Commands = rec.1.command;
         if cmd == Commands::ListGames {
             let game_list_unlocked = game_list_mutex.lock().unwrap();
@@ -140,12 +140,23 @@ fn set_up_new_client(
     client_comms_mutex: &Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: &Arc<Mutex<MsgChanSender>>,
     cur_id: u32,
+    active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
+    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>
 ) -> (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) {
     let (send_server, rec_channel): (MsgChanSender, MsgChanReceiver) = mpsc::channel();
     client_comms_mutex
         .lock()
         .unwrap()
         .insert(cur_id, send_server);
+    let initial_nick: String = "user_".to_string() + &cur_id.to_string();
+    active_nicks_mutex
+        .lock()
+        .unwrap()
+        .insert(initial_nick.clone());
+    id_nick_map_mutex
+        .lock()
+        .unwrap()
+        .insert(cur_id, initial_nick);
     let snd_channel = Arc::clone(&client_to_server_sender);
     (snd_channel, rec_channel)
 }
@@ -153,6 +164,8 @@ fn set_up_new_client(
 fn tcp_connection_manager(
     client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: Arc<Mutex<MsgChanSender>>,
+    active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
+    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
 ) {
     let connection = "localhost:42069";
     let listener = TcpListener::bind(connection).unwrap();
@@ -164,7 +177,12 @@ fn tcp_connection_manager(
             Ok(stream) => {
                 info!("New connection: {}", stream.peer_addr().unwrap());
                 let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) =
-                    set_up_new_client(&client_comms_mutex, &client_to_server_sender, cur_id);
+                    set_up_new_client(
+                        &client_comms_mutex,
+                        &client_to_server_sender,
+                        cur_id,
+                        &active_nicks_mutex,
+                        &id_nick_map_mutex);
                 thread::spawn(move || {
                     handle_each_client(stream, &channels.0, &channels.1, cur_id);
                 });
@@ -195,14 +213,24 @@ pub fn run_server() {
 
     let client_comms_mute_tcp_manager_copy = Arc::clone(&client_comms_mutex);
     let client_comms_mute_client_manager_copy = Arc::clone(&client_comms_mutex);
+    let active_nicks_mutex_data_copy = Arc::clone(&active_nicks_mutex);
+    let id_nick_map_mutex_data_copy = Arc::clone(&id_nick_map_mutex);
+    let active_nicks_mutex_tcp_copy = Arc::clone(&active_nicks_mutex);
+    let id_nick_map_mutex_tcp_copy = Arc::clone(&id_nick_map_mutex);
+
     thread::spawn(move || {
         data_manager(
             client_comms_mute_client_manager_copy,
             rec_server_master,
             game_list_mutex,
-            active_nicks_mutex,
-            id_nick_map_mutex
+            active_nicks_mutex_data_copy,
+            id_nick_map_mutex_data_copy
         );
     });
-    tcp_connection_manager(client_comms_mute_tcp_manager_copy, client_to_server_sender)
+    tcp_connection_manager(
+        client_comms_mute_tcp_manager_copy,
+        client_to_server_sender,
+        active_nicks_mutex_tcp_copy,
+        id_nick_map_mutex_tcp_copy
+    );
 }
