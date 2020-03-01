@@ -6,6 +6,7 @@ const SLOTS: usize = 7; // there are 6 playable slots and one goal slot
 const STARTING_STONES: u8 = 4;
 const BOARD_LENGTH: usize = SLOTS * 2;
 
+/// Object holding all of a game's state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GameState {
     pub player_one: u32,
@@ -20,6 +21,9 @@ pub struct GameState {
 }
 
 impl GameState {
+
+    /// Initialize new gamestate.  One player required.
+    /// Other values set to sensible defaults.
     pub fn new(p_one: u32, name: String, id: u32) -> GameState {
         let mut init_game_board = [STARTING_STONES; SLOTS * 2];
         init_game_board[SLOTS] = 0;
@@ -37,6 +41,9 @@ impl GameState {
         }
     }
 
+    /// Creates an empty game as a workaround for rusts' insistence on
+    /// not allowing uninitialized variables, and needing the game state
+    /// to be sent with all messages.
     pub fn new_empty() -> GameState {
         GameState {
             player_one: 0,
@@ -56,7 +63,9 @@ impl GameState {
         self.active = true;
     }
 
-    //noinspection ALL
+    //noinspection ALL - don't have IDE warnings
+    /// When game is over, add the remaining stones on each players
+    /// side to their goal slot.
     fn collect_remaining_stones(&mut self) {
         self.game_board[self.player_one_goal_slot] +=
             &self.game_board[1..self.player_one_goal_slot].iter().sum();
@@ -93,9 +102,10 @@ impl GameState {
         }
     }
 
-    // if your last manacala piece ends up on your side, in an empty slot,
-    // you get to capture your opponents' pieces in the opposite slot and
-    // add them to your goal
+    /// "capturing" function
+    /// if your last manacala piece ends up on your side, in an empty slot,
+    /// you get to capture your opponents' pieces in the opposite slot and
+    /// add them to your goal
     fn capture(&mut self, cur_slot: usize) -> bool {
         if self.game_board[cur_slot] != 1 {
             return false;
@@ -121,8 +131,7 @@ impl GameState {
         self.game_board[slot_to_move] = 0;
         let mut cur_slot: usize = (slot_to_move + 1) % BOARD_LENGTH;
         loop {
-            if cur_slot == goal_slots.1 {
-                // skip opponent's goal
+            if cur_slot == goal_slots.1 { // skip opponents goal
                 cur_slot = (cur_slot + 1) % BOARD_LENGTH;
                 continue;
             }

@@ -1,15 +1,17 @@
 #![feature(io)]
-
 use std::io;
 use std::io::prelude::*;
 use std::fmt::Display;
+use std::{thread, time};
 
 use crate::proto::*;
 use crate::game_objects::*;
 
-use std::{thread, time};
 
 // --------------- out of game --------------- //
+
+/// Initial input screen.  Asks the client for a host and port
+/// to connect to.  Returns a connection string.
 pub fn initial_screen() -> String {
     let mut stdin = io::stdin();
     let mut host = String::new();
@@ -25,6 +27,8 @@ pub fn initial_screen() -> String {
     trimmed_host + &":".to_string() + &port_int.to_string()
 }
 
+
+/// Returns the first message necessary for the client
 pub fn initial_hello_msg() -> Msg {
     Msg {
         status: Status::Ok,
@@ -36,6 +40,8 @@ pub fn initial_hello_msg() -> Msg {
     }
 }
 
+
+///
 pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
     loop {
         let mut stdin = io::stdin();
@@ -90,7 +96,8 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
 }
 
 
-// READ functions
+// --------------- read functions --------------- //
+
 fn list_active_games() -> Msg {
     Msg {
         status: Status::Ok,
@@ -113,6 +120,11 @@ fn list_active_users() -> Msg {
     }
 }
 
+
+// --------------- write functions --------------- //
+
+/// Creates a message, given a game id, asking the server
+/// to add a player to a game
 fn join_game() -> Msg {
     let mut stdin = io::stdin();
     let mut game_id = String::new();
@@ -130,7 +142,7 @@ fn join_game() -> Msg {
 }
 
 
-// WRITE functions
+/// Creates a message to ask the server to change the clients current nickname
 fn set_nickname() -> Msg {
     let mut stdin = io::stdin();
     let mut nickname = String::new();
@@ -147,6 +159,7 @@ fn set_nickname() -> Msg {
     }
 }
 
+
 pub fn start_new_game() -> Msg {
     let mut stdin = io::stdin();
     let mut game_name = String::new();
@@ -162,8 +175,7 @@ pub fn start_new_game() -> Msg {
         game_state: GameState::new_empty()
     }
 }
-//
-//pub fn join_game() -> Msg {}
+
 
 fn client_disconnect(user_nick: &str) -> Msg {
     Msg {
@@ -178,6 +190,13 @@ fn client_disconnect(user_nick: &str) -> Msg {
 
 
 // --------------- in game --------------- //
+
+
+/// Main functionality to handle client IO while in game.  Collections
+/// moves while client's turn is active.
+///
+/// TODO - implement bounds handling for the client.  Dont allow moves
+/// that are illegal.
 pub fn handle_in_game(server_msg: &Msg, connection: &str, my_id: u32) -> Msg {
     if server_msg.status != Status::Ok {
         return Msg {
@@ -201,44 +220,22 @@ pub fn handle_in_game(server_msg: &Msg, connection: &str, my_id: u32) -> Msg {
     let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     println!("Current game state: ");
     render_board(server_msg);
-    if (am_i_player_one && server_msg.game_state.player_one_turn) || (!am_i_player_one && !server_msg.game_state.player_one_turn) {
+    return if (am_i_player_one && server_msg.game_state.player_one_turn) || (!am_i_player_one && !server_msg.game_state.player_one_turn) {
         println!("Waiting for my turn...");
-        return wait_for_my_turn();
+        wait_for_my_turn()
     } else {
-        return make_move();
-    }
-    Msg {
-        status: Status::Ok,
-        headers: Headers::Read,
-        command: Commands::KillMe,
-        game_status: GameStatus::NotInGame,
-        data: String::new(),
-        game_state: GameState::new_empty()
+        make_move()
     }
 }
 
-// Response to Client
-fn get_current_gamestate() -> Msg {
-    Msg {
-        status: Status::Ok,
-        headers: Headers::Read,
-        command: Commands::GetCurrentGamestate,
-        game_status: GameStatus::InGame,
-        data: String::new(),
-        game_state: GameState::new_empty()
-    }
-}
 
 fn wait_for_my_turn() -> Msg {
     let two_sec = time::Duration::from_secs(2);
-    let now = time::Instant::now();
     thread::sleep(two_sec);
     return get_current_gamestate();
 }
 
-fn send_game_state() {}
 
-// Respond to Client's Actions
 fn make_move() -> Msg {
     let mut stdin = io::stdin();
     let mut move_to_make = String::new();
@@ -254,6 +251,7 @@ fn make_move() -> Msg {
         game_state: GameState::new_empty()
     }
 }
+
 
 fn render_board(msg: &Msg) {
     println!("{:?}", msg.game_state.get_board());
@@ -272,8 +270,6 @@ fn leave_game() -> Msg {
         game_state: GameState::new_empty()
     }
 }
-
-fn send_message() {} // TODO - implement?
 
 
 // --------------- handle server response --------------- //

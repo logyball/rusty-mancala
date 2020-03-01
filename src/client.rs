@@ -5,6 +5,10 @@ use crate::proto::*;
 use crate::client_input_handler::*;
 use crate::game_objects::*;
 
+
+/// Client initialization
+/// Gets the client's id from the server, and allows the client to enter
+/// the lobby as well as create a nickname
 fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, String, u32) {
     let mut buffer_arr = [0; 512];
     message.serialize(&mut buffer_arr);
@@ -34,9 +38,16 @@ fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, Str
         }
     }
     let nickname_and_id: Vec<&str> = res_msg.data.split('^').collect();
-    (true, nickname_and_id[0].to_string(), nickname_and_id[1].parse().unwrap())
+    (true, nickname_and_id[0].to_string(), nickname_and_id[1].parse().unwrap()?)
 }
 
+/// Main entry point for the client.
+/// Collects input from the user and performs client IO.  Asks the user
+/// for input, translates the input into Msg data type, responds to server
+/// replies.
+/// Main functionality is split between "ingame" and "out of game" functions,
+/// where the input and validation is different between whether the client
+/// is currently playing a game or currently in the "lobby"
 pub fn run_client() {
     let connection = initial_screen();
     let mut buffer_arr = [0; 512];

@@ -4,6 +4,9 @@ use std::sync::{Arc, Mutex};
 use std::collections::{HashMap, HashSet};
 
 // --------------- out of game --------------- //
+
+/// When the player is in the "lobby", they will send messages
+/// to the server and this is where they are handled.
 pub fn handle_out_of_game(
     cmd: Commands,
     game_list_mutex: &Arc<Mutex<Vec<GameState>>>,
@@ -13,39 +16,29 @@ pub fn handle_out_of_game(
     client_msg: &Msg,
     client_id: u32
 ) -> Msg {
-    if cmd == Commands::InitSetup {
-        return initial_setup(id_nick_map_mutex, client_id);
-    }
-    else if cmd == Commands::ListGames {
-        return list_active_games(game_list_mutex);
-    }
-    else if cmd == Commands::ListUsers {
-        return list_active_users(active_nicks_mutex);
-    }
-    else if cmd == Commands::SetNick {
-        return set_nickname(active_nicks_mutex, id_nick_map_mutex, client_msg, client_id);
-    }
-    else if cmd == Commands::KillMe {
-        return client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id);
-    }
-    else if cmd == Commands::MakeNewGame {
-        return start_new_game(game_list_mutex, id_game_map_mutex, client_id, client_msg.data.clone());
-    }
-    else if cmd == Commands::JoinGame {
-        return join_game(game_list_mutex, id_game_map_mutex, client_id, client_msg);
-    }
-    Msg {
-        status: Status::NotOk,
-        headers: Headers::Response,
-        command: Commands::Reply,
-        game_status: GameStatus::NotInGame,
-        data: String::new(),
-        game_state: GameState::new_empty()
+    return match cmd {
+        Commands::InitSetup => { initial_setup(id_nick_map_mutex, client_id) }
+        Commands::ListGames => { list_active_games(game_list_mutex) }
+        Commands::ListUsers => { list_active_users(active_nicks_mutex) }
+        Commands::SetNick => { set_nickname(active_nicks_mutex, id_nick_map_mutex, client_msg, client_id) }
+        Commands::KillMe => { client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id) }
+        Commands::MakeNewGame => { start_new_game(game_list_mutex, id_game_map_mutex, client_id, client_msg.data.clone()) }
+        Commands::JoinGame => { join_game(game_list_mutex, id_game_map_mutex, client_id, client_msg) }
+        _ => {
+            Msg {
+                status: Status::NotOk,
+                headers: Headers::Response,
+                command: Commands::Reply,
+                game_status: GameStatus::NotInGame,
+                data: String::new(),
+                game_state: GameState::new_empty()
+            }
+        }
     }
 }
 
 
-// READ functions
+// --------------- out of game READ functions --------------- //
 pub fn initial_setup(
     id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
     client_id: u32) -> Msg {
@@ -91,10 +84,10 @@ pub fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Ms
     }
 }
 
-// pub fn get_game_info() -> Msg {}
 
-
-// WRITE functions
+// --------------- out of game READ functions --------------- //
+/// Sets a clients nickname based on a passed-in string.  Compares across
+/// already registered nicknames and doesn't allow duplicate values
 pub fn set_nickname(
     active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
@@ -127,6 +120,7 @@ pub fn set_nickname(
         }
     }
 }
+
 
 fn start_new_game(
     game_list_mutex: &Arc<Mutex<Vec<GameState>>>,
@@ -179,6 +173,9 @@ fn join_game(
     }
 }
 
+
+/// Remove a client from the list of active users and send the message
+/// that the client should be killed
 fn client_disconnect(
     active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
@@ -237,7 +234,7 @@ pub fn handle_in_game(
     }
 }
 
-// Response to Client
+
 fn current_state(game: &GameState) -> Msg {
     Msg {
         status: Status::Ok,
@@ -249,7 +246,7 @@ fn current_state(game: &GameState) -> Msg {
     }
 }
 
-// Respond to Client's Actions
+
 pub fn make_move(client_msg: &Msg, game: &mut GameState) -> Msg {
     let move_to_make: u32 = client_msg.data.parse().unwrap();
     game.make_move(move_to_make as usize);
@@ -262,7 +259,3 @@ pub fn make_move(client_msg: &Msg, game: &mut GameState) -> Msg {
         game_state: game.clone()
     }
 }
-
-pub fn leave_game() {} // TODO - implement?
-
-pub fn send_message() {} // TODO - implement?
