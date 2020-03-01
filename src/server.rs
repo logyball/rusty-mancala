@@ -1,6 +1,6 @@
+use crate::game_objects::*;
 use crate::proto::*;
 use crate::server_input_handler::*;
-use crate::game_objects::*;
 
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
@@ -11,7 +11,10 @@ use std::thread;
 pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
 pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
 
-fn handle_client_input(buffer: &[u8; 512], size: usize) -> Msg {
+/// Handle client message
+/// Messages from client are deserialized, checked for errors and
+/// passed back to data management.
+fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     let client_msg: Msg = bincode::deserialize(&buffer[0..size]).unwrap();
     info!("TCP data received: {:?}", client_msg);
     if client_msg.status != Status::Ok {
@@ -21,7 +24,11 @@ fn handle_client_input(buffer: &[u8; 512], size: usize) -> Msg {
     client_msg
 }
 
-fn handle_each_client(
+/// Per-client tcp connection handler
+/// TCP input is received from client connection and message is handled.
+/// Messages are processed by handle_client_input_msg and appropriate actions
+/// are taken.  Responses sent to client over TCP.
+fn handle_each_client_tcp_connection(
     mut stream: TcpStream,
     snd_channel: &Arc<Mutex<MsgChanSender>>,
     rec_channel: &MsgChanReceiver,
@@ -35,8 +42,7 @@ fn handle_each_client(
                     info!("Client terminated connection");
                     break;
                 }
-                let msg_to_send_to_manager: Msg =
-                    handle_client_input(&buffer, size);
+                let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
                 snd_channel
                     .lock()
                     .unwrap()
@@ -45,9 +51,7 @@ fn handle_each_client(
                 let response_from_manager: (u32, Msg) =
                     rec_channel.recv().expect("something wrong");
                 response_from_manager.1.serialize(&mut buffer);
-                stream
-                    .write_all(&buffer)
-                    .unwrap();
+                stream.write_all(&buffer).unwrap();
                 stream.flush().unwrap();
                 info!("TCP response sent: {:?}", &response_from_manager.1);
             }
@@ -62,13 +66,18 @@ fn handle_each_client(
     }
 }
 
+/// Data Management
+///     Thread spun from master process that allows for sharing of data.
+/// Game states are recorded as well as per-connection client information.
+/// Messages are received from the TCP connection manager and handled
+/// based on message content.  Responses are sent to TCP Connection Manager
 fn data_manager(
     cli_comms: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     rec_server_master: MsgChanReceiver,
     game_list_mutex: Arc<Mutex<Vec<GameState>>>,
     id_game_map_mutex: Arc<Mutex<HashMap<u32, u32>>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
-    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
+    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
     loop {
         let rec: (u32, Msg) = rec_server_master
@@ -86,26 +95,30 @@ fn data_manager(
                 &active_nicks_mutex,
                 &id_nick_map_mutex,
                 &rec.1,
-            rec.0);
-            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+                rec.0,
+            );
+            res_comm_channel
+                .send((rec.0, server_res))
+                .expect("Error sending to thread");
             continue;
         }
-        let server_res: Msg = handle_in_game(
-            cmd,
-            &game_list_mutex,
-            &id_game_map_mutex,
-            &rec.1,
-            rec.0);
-        res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+        let server_res: Msg =
+            handle_in_game(cmd, &game_list_mutex, &id_game_map_mutex, &rec.1, rec.0);
+        res_comm_channel
+            .send((rec.0, server_res))
+            .expect("Error sending to thread");
     }
 }
 
-fn set_up_new_client(
+/// Set up new client
+/// Gives initial values to client as well as opening a new communication
+/// channel to the data manager.
+fn set_up_new_client_tcp_connection(
     client_comms_mutex: &Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: &Arc<Mutex<MsgChanSender>>,
     cur_id: u32,
     active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
-    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>
+    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
 ) -> (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) {
     let (send_server, rec_channel): (MsgChanSender, MsgChanReceiver) = mpsc::channel();
     client_comms_mutex
@@ -125,11 +138,15 @@ fn set_up_new_client(
     (snd_channel, rec_channel)
 }
 
+/// TCP Connection Manager
+/// Thread spawned from the master process.  Will handle each client that
+/// connects. Performs some initialization after connection and then loops
+/// on handling client input.
 fn tcp_connection_manager(
     client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: Arc<Mutex<MsgChanSender>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
-    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
+    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
     let connection = "localhost:42069";
     let listener = TcpListener::bind(connection).unwrap();
@@ -141,14 +158,15 @@ fn tcp_connection_manager(
             Ok(stream) => {
                 info!("New connection: {}", stream.peer_addr().unwrap());
                 let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) =
-                    set_up_new_client(
+                    set_up_new_client_tcp_connection(
                         &client_comms_mutex,
                         &client_to_server_sender,
                         cur_id,
                         &active_nicks_mutex,
-                        &id_nick_map_mutex);
+                        &id_nick_map_mutex,
+                    );
                 thread::spawn(move || {
-                    handle_each_client(stream, &channels.0, &channels.1, cur_id);
+                    handle_each_client_tcp_connection(stream, &channels.0, &channels.1, cur_id);
                 });
                 cur_id += 1;
             }
@@ -159,6 +177,15 @@ fn tcp_connection_manager(
     }
 }
 
+/// The main entry point into the server side of the Mancala program.  Does all
+/// setup for managing data as well as TCP connections.  Creates shared data structures
+/// accessible to all running threads.  Spawns two main management functions:
+///    - Data Manager
+///      Handles all the shared data structures.  Maintains game state and communicates
+///      with spawned per-client threads
+///    - TCP Connection Manager
+///      Spawns a new thread per client TCP connection and manages IO with the client
+///      communicates via channels with data manager
 pub fn run_server() {
     let game_list: Vec<GameState> = vec![];
     let game_list_mutex = Arc::new(Mutex::new(game_list));
@@ -193,13 +220,13 @@ pub fn run_server() {
             game_list_mutex,
             id_game_map_mutex_copy,
             active_nicks_mutex_data_copy,
-            id_nick_map_mutex_data_copy
+            id_nick_map_mutex_data_copy,
         );
     });
     tcp_connection_manager(
         client_comms_mutex_tcp_manager_copy,
         client_to_server_sender,
         active_nicks_mutex_tcp_copy,
-        id_nick_map_mutex_tcp_copy
+        id_nick_map_mutex_tcp_copy,
     );
 }
