@@ -4,11 +4,11 @@ extern crate simple_logger;
 
 use std::{env, process};
 mod client;
+mod client_input_handler;
+mod game_objects;
 mod proto;
 mod server;
 mod server_input_handler;
-mod client_input_handler;
-mod game_objects;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

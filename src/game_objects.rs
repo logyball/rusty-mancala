@@ -1,6 +1,4 @@
-use std::string::ToString;
 use serde::{Deserialize, Serialize};
-use std::iter;
 
 const SLOTS: usize = 7; // there are 6 playable slots and one goal slot
 const STARTING_STONES: u8 = 4;
@@ -50,7 +48,7 @@ impl GameState {
             player_two: 0,
             game_name: "empty".to_string(),
             game_id: 0,
-            game_board: [0; SLOTS*2],
+            game_board: [0; SLOTS * 2],
             player_one_goal_slot: 0,
             player_two_goal_slot: 0,
             player_one_turn: false,
@@ -168,7 +166,7 @@ impl GameState {
 
 #[test]
 fn test_game_state_can_be_initialized() {
-    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    let gs: GameState = GameState::new(1, "name".to_string(), 0);
     assert!(!gs.active);
 }
 
