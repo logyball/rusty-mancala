@@ -8,6 +8,7 @@ mod proto;
 mod server;
 mod server_input_handler;
 mod client_input_handler;
+mod game_objects;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

@@ -5,6 +5,9 @@ use std::io::prelude::*;
 use std::fmt::Display;
 
 use crate::proto::*;
+use crate::game_objects::*;
+
+use std::{thread, time};
 
 // --------------- out of game --------------- //
 pub fn initial_screen() -> String {
@@ -28,7 +31,8 @@ pub fn initial_hello_msg() -> Msg {
         headers: Headers::Write,
         command: Commands::InitSetup,
         game_status: GameStatus::NotInGame,
-        data: String::new()
+        data: String::new(),
+        game_state: GameState::new_empty()
     }
 }
 
@@ -42,9 +46,10 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
     Welcome to Mancala.  Please select one of the following options:
         (1) Change Nickname
         (2) List Active Games
-        (3) Start New Game
-        (4) Join Game
-        (5) Disconnect
+        (3) List Active Users
+        (4) Start New Game
+        (5) Join Game
+        (6) Disconnect
 
     Enter your choice: ", connection, user_nick);
         io::stdout().flush();
@@ -55,24 +60,22 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
                 match choice {
                     1 => {
                         println!("\n");
-                        let msg = set_nickname();
-                        return msg
+                        return set_nickname();
                     }
                     2 => {
-                        let msg = list_active_games();
-                        return msg
+                        return list_active_games();
                     }
                     3 => {
-//                        let msg = start_new_game();
-//                        return msg
+                        return list_active_users();
                     }
                     4 => {
-//                        let msg = join_game();
-//                        return msg
+                        return start_new_game();
                     }
                     5 => {
-                        let msg = client_disconnect(user_nick);
-                        return msg
+                        return join_game();
+                    }
+                    6 => {
+                        return client_disconnect(user_nick);
                     }
                     _ => {
                         println!("invalid selection");
@@ -94,7 +97,8 @@ fn list_active_games() -> Msg {
         headers: Headers::Read,
         command: Commands::ListGames,
         game_status: GameStatus::NotInGame,
-        data: String::new()
+        data: String::new(),
+        game_state: GameState::new_empty()
     }
 }
 
@@ -104,11 +108,26 @@ fn list_active_users() -> Msg {
         headers: Headers::Read,
         command: Commands::ListUsers,
         game_status: GameStatus::NotInGame,
-        data: String::new()
+        data: String::new(),
+        game_state: GameState::new_empty()
     }
 }
 
-// pub fn get_game_info() -> Msg {}
+fn join_game() -> Msg {
+    let mut stdin = io::stdin();
+    let mut game_id = String::new();
+    print!("Which Game Id do you want to join: ");
+    io::stdout().flush().expect("Client input something nonsensical");
+    io::stdin().read_line(&mut game_id).expect("I/O error");
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::JoinGame,
+        game_status: GameStatus::NotInGame,
+        data: game_id.trim().to_string(),
+        game_state: GameState::new_empty()
+    }
+}
 
 
 // WRITE functions
@@ -116,18 +135,33 @@ fn set_nickname() -> Msg {
     let mut stdin = io::stdin();
     let mut nickname = String::new();
     print!("Enter new nickname: ");
-    io::stdout().flush().expect("Client input something nonesensical");
+    io::stdout().flush().expect("Client input something nonsensical");
     io::stdin().read_line(&mut nickname).expect("I/O error");
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
         command: Commands::SetNick,
         game_status: GameStatus::NotInGame,
-        data: nickname.trim().to_string()
+        data: nickname.trim().to_string(),
+        game_state: GameState::new_empty()
     }
 }
 
-//pub fn start_new_game() -> Msg {}
+pub fn start_new_game() -> Msg {
+    let mut stdin = io::stdin();
+    let mut game_name = String::new();
+    print!("Enter a name of a new game: ");
+    io::stdout().flush();
+    stdin.read_line(&mut game_name);
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::MakeNewGame,
+        game_status: GameStatus::NotInGame,
+        data: game_name.trim().to_string(),
+        game_state: GameState::new_empty()
+    }
+}
 //
 //pub fn join_game() -> Msg {}
 
@@ -137,50 +171,133 @@ fn client_disconnect(user_nick: &str) -> Msg {
         headers: Headers::Read,
         command: Commands::KillMe,
         game_status: GameStatus::NotInGame,
-        data: String::new()
+        data: String::new(),
+        game_state: GameState::new_empty()
     }
 }
 
 
 // --------------- in game --------------- //
-pub fn handle_in_game() -> Msg {
+pub fn handle_in_game(server_msg: &Msg, connection: &str, my_id: u32) -> Msg {
+    if server_msg.status != Status::Ok {
+        return Msg {
+            status: Status::Ok,
+            headers: Headers::Read,
+            command: Commands::KillMe,
+            game_status: GameStatus::NotInGame,
+            data: String::new(),
+            game_state: GameState::new_empty()
+        };
+    }
+    if server_msg.command == Commands::GameIsOver {
+        println!("Game Over!");
+        render_board(server_msg);
+        return leave_game();
+    }
+    if !server_msg.game_state.active {
+        println!("Waiting for another player...");
+        return wait_for_my_turn();
+    }
+    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
+    println!("Current game state: ");
+    render_board(server_msg);
+    if (am_i_player_one && server_msg.game_state.player_one_turn) || (!am_i_player_one && !server_msg.game_state.player_one_turn) {
+        println!("Waiting for my turn...");
+        return wait_for_my_turn();
+    } else {
+        return make_move();
+    }
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
         command: Commands::KillMe,
         game_status: GameStatus::NotInGame,
-        data: String::new()
+        data: String::new(),
+        game_state: GameState::new_empty()
     }
 }
 
 // Response to Client
-pub fn clients_turn() {}
+fn get_current_gamestate() -> Msg {
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Read,
+        command: Commands::GetCurrentGamestate,
+        game_status: GameStatus::InGame,
+        data: String::new(),
+        game_state: GameState::new_empty()
+    }
+}
 
-pub fn send_game_state() {}
+fn wait_for_my_turn() -> Msg {
+    let two_sec = time::Duration::from_secs(2);
+    let now = time::Instant::now();
+    thread::sleep(two_sec);
+    return get_current_gamestate();
+}
+
+fn send_game_state() {}
 
 // Respond to Client's Actions
-pub fn make_move() {}
+fn make_move() -> Msg {
+    let mut stdin = io::stdin();
+    let mut move_to_make = String::new();
+    print!("Which slot do you want to move: ");
+    io::stdout().flush();
+    stdin.read_line(&mut move_to_make);
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::MakeMove,
+        game_status: GameStatus::InGame,
+        data: move_to_make.trim().to_string(),
+        game_state: GameState::new_empty()
+    }
+}
 
-pub fn leave_game() {} // TODO - implement?
+fn render_board(msg: &Msg) {
+    println!("{:?}", msg.game_state.get_board());
+    println!("Player One score: {}", msg.game_state.get_player_one_score());
+    println!("Player Two score: {}", msg.game_state.get_player_two_score());
+}
 
-pub fn send_message() {} // TODO - implement?
+
+fn leave_game() -> Msg {
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::LeaveGame,
+        game_status: GameStatus::InGame,
+        data: String::new(),
+        game_state: GameState::new_empty()
+    }
+}
+
+fn send_message() {} // TODO - implement?
 
 
 // --------------- handle server response --------------- //
-pub fn handle_server_response(server_msg: &Msg, connection: &str, nickname: &mut String) -> Msg {
+pub fn handle_server_response(
+    server_msg: &Msg,
+    connection: &str,
+    nickname: &mut String,
+    my_id: u32
+) -> Msg {
     if !server_msg.data.is_empty() {
         println!("server response: {}", server_msg.data);
     }
     if server_msg.command == Commands::SetNick {
-        let new_nick: String = server_msg.data.clone();
-        *nickname = new_nick.clone();
+        if server_msg.status == Status::Ok {
+            let new_nick: String = server_msg.data.clone();
+            *nickname = new_nick.clone();
+        }
     }
     return match server_msg.game_status {
         GameStatus::NotInGame => {
             handle_out_of_game(connection, &nickname)
         }
         _ => {
-            handle_in_game()
+            handle_in_game(server_msg, connection, my_id)
         }
     }
 }

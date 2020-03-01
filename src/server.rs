@@ -1,5 +1,6 @@
 use crate::proto::*;
 use crate::server_input_handler::*;
+use crate::game_objects::*;
 
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
@@ -64,7 +65,8 @@ fn handle_each_client(
 fn data_manager(
     cli_comms: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     rec_server_master: MsgChanReceiver,
-    game_list_mutex: Arc<Mutex<Vec<String>>>,
+    game_list_mutex: Arc<Mutex<Vec<GameState>>>,
+    id_game_map_mutex: Arc<Mutex<HashMap<u32, u32>>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
 ) {
@@ -80,6 +82,7 @@ fn data_manager(
             let server_res: Msg = handle_out_of_game(
                 cmd,
                 &game_list_mutex,
+                &id_game_map_mutex,
                 &active_nicks_mutex,
                 &id_nick_map_mutex,
                 &rec.1,
@@ -87,7 +90,13 @@ fn data_manager(
             res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
             continue;
         }
-        // else do in-game
+        let server_res: Msg = handle_in_game(
+            cmd,
+            &game_list_mutex,
+            &id_game_map_mutex,
+            &rec.1,
+            rec.0);
+        res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
     }
 }
 
@@ -124,7 +133,7 @@ fn tcp_connection_manager(
 ) {
     let connection = "localhost:42069";
     let listener = TcpListener::bind(connection).unwrap();
-    let mut cur_id: u32 = 0;
+    let mut cur_id: u32 = 1;
 
     info!("Server listening on port 42069");
     for stream in listener.incoming() {
@@ -151,8 +160,11 @@ fn tcp_connection_manager(
 }
 
 pub fn run_server() {
-    let game_list: Vec<String> = vec![];
+    let game_list: Vec<GameState> = vec![];
     let game_list_mutex = Arc::new(Mutex::new(game_list));
+
+    let id_to_game_map: HashMap<u32, u32> = HashMap::new();
+    let id_to_game_map_mutex = Arc::new(Mutex::new(id_to_game_map));
 
     let active_nicks: HashSet<String> = HashSet::new();
     let active_nicks_mutex = Arc::new(Mutex::new(active_nicks));
@@ -172,12 +184,14 @@ pub fn run_server() {
     let id_nick_map_mutex_data_copy = Arc::clone(&id_nick_map_mutex);
     let active_nicks_mutex_tcp_copy = Arc::clone(&active_nicks_mutex);
     let id_nick_map_mutex_tcp_copy = Arc::clone(&id_nick_map_mutex);
+    let id_game_map_mutex_copy = Arc::clone(&id_to_game_map_mutex);
 
     thread::spawn(move || {
         data_manager(
             client_comms_mutex_client_manager_copy,
             rec_server_master,
             game_list_mutex,
+            id_game_map_mutex_copy,
             active_nicks_mutex_data_copy,
             id_nick_map_mutex_data_copy
         );

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::game_objects::*;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub enum Headers {
@@ -26,6 +27,11 @@ pub enum Commands {
     ListGames,
     ListUsers,
     MakeNewGame,
+    JoinGame,
+    LeaveGame,
+    GetCurrentGamestate,
+    MakeMove,
+    GameIsOver,
     KillMe,
     KillClient,
     Reply
@@ -37,7 +43,8 @@ pub struct Msg {
     pub headers: Headers,
     pub command: Commands,
     pub game_status: GameStatus,
-    pub data: String
+    pub data: String,
+    pub game_state: GameState
 }
 
 impl Msg {
@@ -56,7 +63,8 @@ fn test_serialize_msg() {
         headers: Headers::Write,
         command: Commands::SetNick,
         game_status: GameStatus::NotInGame,
-        data: "data".to_string()
+        data: "data".to_string(),
+        game_state: GameState::new_empty()
     };
     let mut buf: [u8; 512] = [0; 512];
     msg1.serialize(&mut buf);
