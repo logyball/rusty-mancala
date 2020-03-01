@@ -17,32 +17,34 @@ pub fn handle_out_of_game(
     client_id: u32,
 ) -> Msg {
     return match cmd {
-        Commands::InitSetup => { initial_setup(id_nick_map_mutex, client_id) }
-        Commands::ListGames => { list_active_games(game_list_mutex) }
-        Commands::ListUsers => { list_active_users(active_nicks_mutex) }
-        Commands::SetNick => { set_nickname(active_nicks_mutex, id_nick_map_mutex, client_msg, client_id) }
-        Commands::KillMe => { client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id) }
-        Commands::MakeNewGame => { start_new_game(game_list_mutex, id_game_map_mutex, client_id, client_msg.data.clone()) }
-        Commands::JoinGame => { join_game(game_list_mutex, id_game_map_mutex, client_id, client_msg) }
-        _ => {
-            Msg {
-                status: Status::NotOk,
-                headers: Headers::Response,
-                command: Commands::Reply,
-                game_status: GameStatus::NotInGame,
-                data: String::new(),
-                game_state: GameState::new_empty()
-            }
+        Commands::InitSetup => initial_setup(id_nick_map_mutex, client_id),
+        Commands::ListGames => list_active_games(game_list_mutex),
+        Commands::ListUsers => list_active_users(active_nicks_mutex),
+        Commands::SetNick => {
+            set_nickname(active_nicks_mutex, id_nick_map_mutex, client_msg, client_id)
         }
-    }
+        Commands::KillMe => client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id),
+        Commands::MakeNewGame => start_new_game(
+            game_list_mutex,
+            id_game_map_mutex,
+            client_id,
+            client_msg.data.clone(),
+        ),
+        Commands::JoinGame => join_game(game_list_mutex, id_game_map_mutex, client_id, client_msg),
+        _ => Msg {
+            status: Status::NotOk,
+            headers: Headers::Response,
+            command: Commands::Reply,
+            game_status: GameStatus::NotInGame,
+            data: String::new(),
+            game_state: GameState::new_empty(),
+        },
+    };
 }
 
-
 // --------------- out of game READ functions --------------- //
-pub fn initial_setup(
-    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
-    client_id: u32) -> Msg {
-    let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
+pub fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id: u32) -> Msg {
+    let id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
     let nickname = id_nick_map_unlocked.get(&client_id).unwrap();
     Msg {
         status: Status::Ok,
@@ -86,7 +88,6 @@ pub fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Ms
     }
 }
 
-
 // --------------- out of game READ functions --------------- //
 /// Sets a clients nickname based on a passed-in string.  Compares across
 /// already registered nicknames and doesn't allow duplicate values
@@ -123,7 +124,6 @@ pub fn set_nickname(
         }
     }
 }
-
 
 fn start_new_game(
     game_list_mutex: &Arc<Mutex<Vec<GameState>>>,
@@ -171,7 +171,6 @@ fn join_game(
         game_state: game.clone(),
     }
 }
-
 
 /// Remove a client from the list of active users and send the message
 /// that the client should be killed
@@ -231,7 +230,6 @@ pub fn handle_in_game(
     }
 }
 
-
 fn current_state(game: &GameState) -> Msg {
     Msg {
         status: Status::Ok,
@@ -242,7 +240,6 @@ fn current_state(game: &GameState) -> Msg {
         game_state: game.clone(),
     }
 }
-
 
 pub fn make_move(client_msg: &Msg, game: &mut GameState) -> Msg {
     let move_to_make: u32 = client_msg.data.parse().unwrap();

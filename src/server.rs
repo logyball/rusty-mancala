@@ -11,7 +11,6 @@ use std::thread;
 pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
 pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
 
-
 /// Handle client message
 /// Messages from client are deserialized, checked for errors and
 /// passed back to data management.
@@ -24,7 +23,6 @@ fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     }
     client_msg
 }
-
 
 /// Per-client tcp connection handler
 /// TCP input is received from client connection and message is handled.
@@ -44,7 +42,7 @@ fn handle_each_client_tcp_connection(
                     info!("Client terminated connection");
                     break;
                 }
-                let msg_to_send_to_manager: Msg = handle_client_input(&buffer, size);
+                let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
                 snd_channel
                     .lock()
                     .unwrap()
@@ -67,7 +65,6 @@ fn handle_each_client_tcp_connection(
         }
     }
 }
-
 
 /// Data Management
 ///     Thread spun from master process that allows for sharing of data.
@@ -113,7 +110,6 @@ fn data_manager(
     }
 }
 
-
 /// Set up new client
 /// Gives initial values to client as well as opening a new communication
 /// channel to the data manager.
@@ -142,7 +138,6 @@ fn set_up_new_client_tcp_connection(
     (snd_channel, rec_channel)
 }
 
-
 /// TCP Connection Manager
 /// Thread spawned from the master process.  Will handle each client that
 /// connects. Performs some initialization after connection and then loops
@@ -162,13 +157,14 @@ fn tcp_connection_manager(
         match stream {
             Ok(stream) => {
                 info!("New connection: {}", stream.peer_addr().unwrap());
-                let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) = set_up_new_client(
-                    &client_comms_mutex,
-                    &client_to_server_sender,
-                    cur_id,
-                    &active_nicks_mutex,
-                    &id_nick_map_mutex,
-                );
+                let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) =
+                    set_up_new_client_tcp_connection(
+                        &client_comms_mutex,
+                        &client_to_server_sender,
+                        cur_id,
+                        &active_nicks_mutex,
+                        &id_nick_map_mutex,
+                    );
                 thread::spawn(move || {
                     handle_each_client_tcp_connection(stream, &channels.0, &channels.1, cur_id);
                 });
@@ -180,7 +176,6 @@ fn tcp_connection_manager(
         }
     }
 }
-
 
 /// The main entry point into the server side of the Mancala program.  Does all
 /// setup for managing data as well as TCP connections.  Creates shared data structures

@@ -27,7 +27,6 @@ pub fn initial_screen() -> String {
     trimmed_host + &":".to_string() + &port_int.to_string()
 }
 
-
 /// Returns the first message necessary for the client
 pub fn initial_hello_msg() -> Msg {
     Msg {
@@ -39,7 +38,6 @@ pub fn initial_hello_msg() -> Msg {
         game_state: GameState::new_empty(),
     }
 }
-
 
 ///
 pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
@@ -97,7 +95,6 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
     }
 }
 
-
 // --------------- read functions --------------- //
 fn list_active_games() -> Msg {
     Msg {
@@ -121,7 +118,6 @@ fn list_active_users() -> Msg {
     }
 }
 
-
 // --------------- write functions --------------- //
 
 /// Creates a message, given a game id, asking the server
@@ -143,7 +139,6 @@ fn join_game() -> Msg {
     }
 }
 
-
 /// Creates a message to ask the server to change the clients current nickname
 fn set_nickname() -> Msg {
     let stdin = io::stdin();
@@ -162,7 +157,6 @@ fn set_nickname() -> Msg {
     }
 }
 
-
 pub fn start_new_game() -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -180,7 +174,6 @@ pub fn start_new_game() -> Msg {
     }
 }
 
-
 fn client_disconnect() -> Msg {
     Msg {
         status: Status::Ok,
@@ -193,7 +186,6 @@ fn client_disconnect() -> Msg {
 }
 
 // --------------- in game --------------- //
-
 
 /// Main functionality to handle client IO while in game.  Collections
 /// moves while client's turn is active.
@@ -251,7 +243,6 @@ fn wait_for_my_turn() -> Msg {
     return get_current_gamestate();
 }
 
-
 fn make_move() -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -270,7 +261,6 @@ fn make_move() -> Msg {
         game_state: GameState::new_empty(),
     }
 }
-
 
 fn render_board(msg: &Msg) {
     println!("{:?}", msg.game_state.get_board());
@@ -294,7 +284,6 @@ fn leave_game() -> Msg {
         game_state: GameState::new_empty(),
     }
 }
-
 
 // --------------- handle server response --------------- //
 pub fn handle_server_response(

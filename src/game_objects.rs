@@ -19,7 +19,6 @@ pub struct GameState {
 }
 
 impl GameState {
-
     /// Initialize new gamestate.  One player required.
     /// Other values set to sensible defaults.
     pub fn new(p_one: u32, name: String, id: u32) -> GameState {
@@ -129,7 +128,8 @@ impl GameState {
         self.game_board[slot_to_move] = 0;
         let mut cur_slot: usize = (slot_to_move + 1) % BOARD_LENGTH;
         loop {
-            if cur_slot == goal_slots.1 { // skip opponents goal
+            if cur_slot == goal_slots.1 {
+                // skip opponents goal
                 cur_slot = (cur_slot + 1) % BOARD_LENGTH;
                 continue;
             }
