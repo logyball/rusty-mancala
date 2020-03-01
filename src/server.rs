@@ -1,6 +1,6 @@
+use crate::game_objects::*;
 use crate::proto::*;
 use crate::server_input_handler::*;
-use crate::game_objects::*;
 
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
@@ -35,8 +35,7 @@ fn handle_each_client(
                     info!("Client terminated connection");
                     break;
                 }
-                let msg_to_send_to_manager: Msg =
-                    handle_client_input(&buffer, size);
+                let msg_to_send_to_manager: Msg = handle_client_input(&buffer, size);
                 snd_channel
                     .lock()
                     .unwrap()
@@ -45,9 +44,7 @@ fn handle_each_client(
                 let response_from_manager: (u32, Msg) =
                     rec_channel.recv().expect("something wrong");
                 response_from_manager.1.serialize(&mut buffer);
-                stream
-                    .write_all(&buffer)
-                    .unwrap();
+                stream.write_all(&buffer).unwrap();
                 stream.flush().unwrap();
                 info!("TCP response sent: {:?}", &response_from_manager.1);
             }
@@ -68,7 +65,7 @@ fn data_manager(
     game_list_mutex: Arc<Mutex<Vec<GameState>>>,
     id_game_map_mutex: Arc<Mutex<HashMap<u32, u32>>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
-    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
+    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
     loop {
         let rec: (u32, Msg) = rec_server_master
@@ -86,17 +83,18 @@ fn data_manager(
                 &active_nicks_mutex,
                 &id_nick_map_mutex,
                 &rec.1,
-            rec.0);
-            res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+                rec.0,
+            );
+            res_comm_channel
+                .send((rec.0, server_res))
+                .expect("Error sending to thread");
             continue;
         }
-        let server_res: Msg = handle_in_game(
-            cmd,
-            &game_list_mutex,
-            &id_game_map_mutex,
-            &rec.1,
-            rec.0);
-        res_comm_channel.send((rec.0, server_res) ).expect("Error sending to thread");
+        let server_res: Msg =
+            handle_in_game(cmd, &game_list_mutex, &id_game_map_mutex, &rec.1, rec.0);
+        res_comm_channel
+            .send((rec.0, server_res))
+            .expect("Error sending to thread");
     }
 }
 
@@ -105,7 +103,7 @@ fn set_up_new_client(
     client_to_server_sender: &Arc<Mutex<MsgChanSender>>,
     cur_id: u32,
     active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
-    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>
+    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
 ) -> (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) {
     let (send_server, rec_channel): (MsgChanSender, MsgChanReceiver) = mpsc::channel();
     client_comms_mutex
@@ -129,7 +127,7 @@ fn tcp_connection_manager(
     client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: Arc<Mutex<MsgChanSender>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
-    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>
+    id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
     let connection = "localhost:42069";
     let listener = TcpListener::bind(connection).unwrap();
@@ -140,13 +138,13 @@ fn tcp_connection_manager(
         match stream {
             Ok(stream) => {
                 info!("New connection: {}", stream.peer_addr().unwrap());
-                let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) =
-                    set_up_new_client(
-                        &client_comms_mutex,
-                        &client_to_server_sender,
-                        cur_id,
-                        &active_nicks_mutex,
-                        &id_nick_map_mutex);
+                let channels: (Arc<Mutex<MsgChanSender>>, MsgChanReceiver) = set_up_new_client(
+                    &client_comms_mutex,
+                    &client_to_server_sender,
+                    cur_id,
+                    &active_nicks_mutex,
+                    &id_nick_map_mutex,
+                );
                 thread::spawn(move || {
                     handle_each_client(stream, &channels.0, &channels.1, cur_id);
                 });
@@ -193,13 +191,13 @@ pub fn run_server() {
             game_list_mutex,
             id_game_map_mutex_copy,
             active_nicks_mutex_data_copy,
-            id_nick_map_mutex_data_copy
+            id_nick_map_mutex_data_copy,
         );
     });
     tcp_connection_manager(
         client_comms_mutex_tcp_manager_copy,
         client_to_server_sender,
         active_nicks_mutex_tcp_copy,
-        id_nick_map_mutex_tcp_copy
+        id_nick_map_mutex_tcp_copy,
     );
 }
