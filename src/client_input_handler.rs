@@ -126,16 +126,29 @@ fn list_active_users() -> Msg {
 fn join_game() -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let mut game_id = String::new();
-    print!("Which Game Id do you want to join: ");
-    stdout.flush().expect("Client input something nonsensical");
-    stdin.read_line(&mut game_id).expect("I/O error");
+    let game_id: usize;
+    loop {
+        let mut game_id_input = String::new();
+        print!("Which Game ID do you want to join: ");
+        stdout.flush().expect("Client input something nonsensical");
+        stdin.read_line(&mut game_id_input).expect("I/O error");
+        match game_id_input.trim().parse() {
+            Ok(x) => {
+                game_id = x;
+                break;
+            }
+            Err(e) => {
+                println!("invalid integer + {}!", e);
+                continue;
+            }
+        }
+    }
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
         command: Commands::JoinGame,
         game_status: GameStatus::NotInGame,
-        data: game_id.trim().to_string(),
+        data: game_id.to_string(),
         game_state: GameState::new_empty(),
     }
 }

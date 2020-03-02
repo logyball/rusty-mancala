@@ -66,7 +66,7 @@ fn handle_each_client_tcp_connection(
 }
 
 /// Data Management
-///     Thread spun from master process that allows for sharing of data.
+/// Thread spun from master process that allows for sharing of data.
 /// Game states are recorded as well as per-connection client information.
 /// Messages are received from the TCP connection manager and handled
 /// based on message content.  Responses are sent to TCP Connection Manager
