@@ -323,7 +323,6 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
 
 fn render_board(msg: &Msg) {
     let board = msg.game_state.get_board();
-    // println!("{:?}", msg.game_state.get_board());
     println!("\nPlayer 1 at top, Player 2 at bottom:");
 
     // Player1
