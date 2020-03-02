@@ -159,16 +159,36 @@ fn join_game(
     let mut game_list_unlocked = game_list_mutex.lock().unwrap();
     let mut id_game_map_unlocked = id_game_map_mutex.lock().unwrap();
     let game_id: usize = client_msg.data.parse().unwrap();
-    let game: &mut GameState = &mut game_list_unlocked[game_id];
-    game.add_player_two(client_id);
-    id_game_map_unlocked.insert(client_id, game.game_id);
-    Msg {
-        status: Status::Ok,
-        headers: Headers::Response,
-        command: Commands::JoinGame,
-        game_status: GameStatus::InGame,
-        data: format!("Joined Game {}", &game.game_name),
-        game_state: game.clone(),
+    if game_list_unlocked.len() == 0 {
+        Msg {
+            status: Status::Ok,
+            headers: Headers::Response,
+            command: Commands::JoinGame,
+            game_status: GameStatus::NotInGame,
+            data: "No active games available. Please start a new game to begin.".to_string(),
+            game_state: GameState::new_empty(),
+        }
+    } else if game_id > game_list_unlocked.len() - 1 {
+        Msg {
+            status: Status::Ok,
+            headers: Headers::Response,
+            command: Commands::JoinGame,
+            game_status: GameStatus::NotInGame,
+            data: "Invalid game id entered. View active game list for valid game id's".to_string(),
+            game_state: GameState::new_empty(),
+        }
+    } else {
+        let game: &mut GameState = &mut game_list_unlocked[game_id];
+        game.add_player_two(client_id);
+        id_game_map_unlocked.insert(client_id, game.game_id);
+        Msg {
+            status: Status::Ok,
+            headers: Headers::Response,
+            command: Commands::JoinGame,
+            game_status: GameStatus::InGame,
+            data: format!("Joined Game {}", &game.game_name),
+            game_state: game.clone(),
+        }
     }
 }
 
