@@ -150,6 +150,50 @@ fn start_new_game(
     }
 }
 
+
+
+#[test]
+fn test_start_new_game() {
+    let game_list: Vec<GameState> = vec![];
+    let game_list_m: Arc<Mutex<Vec<GameState>>> = Arc::new(Mutex::new(game_list));
+    let id_game_map: HashMap<u32, u32> = HashMap::new();
+    let id_game_map_m: Arc<Mutex<HashMap<u32, u32>>> = Arc::new(Mutex::new(id_game_map));
+    let cli_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::MakeNewGame,
+        game_status: GameStatus::NotInGame,
+        data: "none".to_string(),
+        game_state: GameState::new_empty(),
+    };
+    let client_id: u32 = 10;
+    let res_msg = start_new_game(
+        &game_list_m,
+        &id_game_map_m,
+        client_id,
+        "New Game".to_string()
+    );
+//    assert_eq!(res_msg.status, Status::Ok);
+//    assert_eq!(res_msg.headers, Headers::Response);
+//    assert_eq!(res_msg.command, Commands::MakeNewGame);
+//    assert_eq!(res_msg.game_status, Commands::InGame);
+//    assert_eq!(res_msg.data, "none".to_string());
+//    assert_eq!(
+//        res_msg.game_state,
+//        *game_list_m.lock().unwrap().get(game_id as usize).unwrap()
+//    );
+//    assert!(id_game_map_m.lock().unwrap().contains_key(&client_id));
+//    assert_eq!(
+//        *(id_game_map_m.lock().unwrap().get(&player_one_id).unwrap()),
+//        game_id
+//    );
+//    assert_eq!(
+//        *(id_game_map_m.lock().unwrap().get(&client_id).unwrap()),
+//        game_id
+//    );
+}
+
+
 fn join_game(
     game_list_mutex: &Arc<Mutex<Vec<GameState>>>,
     id_game_map_mutex: &Arc<Mutex<HashMap<u32, u32>>>,
