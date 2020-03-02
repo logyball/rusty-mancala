@@ -258,8 +258,9 @@ fn check_is_move_valid(move_to_make: usize, game_state: &GameState, am_i_player_
     }
     if !range_of_valid_moves.contains(&move_to_make) {
         println!(
-            "Move was not in the playable range of moves, which is {:?} for you.",
-            &range_of_valid_moves
+            "Move was not in the playable range of moves, which is {} -> {} for you.",
+            &range_of_valid_moves.start,
+            &range_of_valid_moves.end - 1
         );
     } else if game_state.game_board[move_to_make] == 0 {
         println!("slot you selected (slot {}) is empty!", &move_to_make);
