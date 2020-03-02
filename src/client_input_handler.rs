@@ -13,17 +13,27 @@ pub fn initial_screen() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut host = String::new();
-    let mut port = String::new();
+    let port_int: u32;
+
     print!("Enter a host: ");
     stdout.flush().expect("Error flushing buffer");
     stdin.read_line(&mut host).expect("Error reading in");
-    print!("Enter a port: ");
-    stdout.flush().expect("Error flushing buffer");
-    stdin.read_line(&mut port).expect("Error reading in");
-    let port_int = port
-        .trim()
-        .parse::<u32>()
-        .expect("could not make port into an int");
+    loop {
+        let mut port = String::new();
+        print!("Enter a port: ");
+        stdout.flush().expect("Error flushing buffer");
+        stdin.read_line(&mut port).expect("Error reading in");
+        match port.trim().parse() {
+            Ok(x) => {
+                port_int = x;
+                break;
+            }
+            Err(e) => {
+                println!("could not make port into an int: {}!", e);
+                continue;
+            }
+        }
+    }
     let trimmed_host = host.trim().to_string();
     trimmed_host + &":".to_string() + &port_int.to_string()
 }
