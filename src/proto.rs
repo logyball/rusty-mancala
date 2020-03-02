@@ -50,9 +50,7 @@ pub struct Msg {
 impl Msg {
     pub fn serialize(&self, buf: &mut [u8; 512]) {
         let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
-        for i in 0..encoded.len() {
-            buf[i] = encoded[i];
-        }
+        buf[..encoded.len()].clone_from_slice(&encoded[..]);
     }
 }
 

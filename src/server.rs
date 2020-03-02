@@ -19,7 +19,6 @@ fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     info!("TCP data received: {:?}", client_msg);
     if client_msg.status != Status::Ok {
         // TODO - some sort of error checking
-        ()
     }
     client_msg
 }

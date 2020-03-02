@@ -219,9 +219,9 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
         println!("Waiting for my turn...");
-        return wait_for_my_turn();
+        wait_for_my_turn()
     } else {
-        return make_move();
+        make_move()
     }
 }
 
@@ -240,7 +240,7 @@ fn get_current_gamestate() -> Msg {
 fn wait_for_my_turn() -> Msg {
     let two_sec = time::Duration::from_secs(2);
     thread::sleep(two_sec);
-    return get_current_gamestate();
+    get_current_gamestate()
 }
 
 fn make_move() -> Msg {
@@ -295,14 +295,12 @@ pub fn handle_server_response(
     if !server_msg.data.is_empty() {
         println!("server response: {}", server_msg.data);
     }
-    if server_msg.command == Commands::SetNick {
-        if server_msg.status == Status::Ok {
-            let new_nick: String = server_msg.data.clone();
-            *nickname = new_nick.clone();
-        }
+    if server_msg.command == Commands::SetNick && server_msg.status == Status::Ok  {
+        let new_nick: String = server_msg.data.clone();
+        *nickname = new_nick;
     }
-    return match server_msg.game_status {
+    match server_msg.game_status {
         GameStatus::NotInGame => handle_out_of_game(connection, &nickname),
         _ => handle_in_game(server_msg, my_id),
-    };
+    }
 }

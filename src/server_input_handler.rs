@@ -16,7 +16,7 @@ pub fn handle_out_of_game(
     client_msg: &Msg,
     client_id: u32,
 ) -> Msg {
-    return match cmd {
+    match cmd {
         Commands::InitSetup => initial_setup(id_nick_map_mutex, client_id),
         Commands::ListGames => list_active_games(game_list_mutex),
         Commands::ListUsers => list_active_users(active_nicks_mutex),
@@ -39,7 +39,7 @@ pub fn handle_out_of_game(
             data: String::new(),
             game_state: GameState::new_empty(),
         },
-    };
+    }
 }
 
 // --------------- out of game READ functions --------------- //
@@ -100,14 +100,14 @@ pub fn set_nickname(
     let nickname = client_msg.data.clone();
     let mut active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
     if active_nicks_unlocked.contains(&nickname) {
-        return Msg {
+        Msg {
             status: Status::NotOk,
             headers: Headers::Response,
             command: Commands::SetNick,
             game_status: GameStatus::NotInGame,
             data: "nickname already in use".to_string(),
             game_state: GameState::new_empty(),
-        };
+        }
     } else {
         let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
         let old_nick = id_nick_map_unlocked.remove(&client_id).unwrap();
@@ -119,7 +119,7 @@ pub fn set_nickname(
             headers: Headers::Response,
             command: Commands::SetNick,
             game_status: GameStatus::NotInGame,
-            data: format!("{}", nickname.clone()),
+            data: nickname,
             game_state: GameState::new_empty(),
         }
     }
@@ -137,7 +137,7 @@ fn start_new_game(
     if game_name.is_empty() {
         game_name = "New Game".to_string();
     }
-    let new_game = GameState::new(client_id, game_name.clone(), game_id);
+    let new_game = GameState::new(client_id, game_name, game_id);
     game_list_unlocked.push(new_game.clone());
     id_game_map_unlocked.insert(client_id, game_id);
     Msg {

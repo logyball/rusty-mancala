@@ -28,7 +28,7 @@ impl GameState {
         GameState {
             player_one: p_one,
             player_two: 0,
-            game_name: name.clone(),
+            game_name: name,
             game_id: id,
             game_board: init_game_board,
             player_one_goal_slot: SLOTS,
