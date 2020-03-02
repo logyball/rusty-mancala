@@ -172,6 +172,50 @@ fn join_game(
     }
 }
 
+#[test]
+fn test_join_game() {
+    let game_list: Vec<GameState> = vec![];
+    let game_list_m: Arc<Mutex<Vec<GameState>>> = Arc::new(Mutex::new(game_list));
+    let id_game_map: HashMap<u32, u32> = HashMap::new();
+    let id_game_map_m: Arc<Mutex<HashMap<u32, u32>>> = Arc::new(Mutex::new(id_game_map));
+    let cli_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::JoinGame,
+        game_status: GameStatus::NotInGame,
+        data: "0".to_string(),
+        game_state: GameState::new_empty(),
+    };
+    let client_id: u32 = 10;
+    let player_one_id: u32 = 5;
+    let game_id: u32 = 0;
+    let new_game = GameState::new(player_one_id, String::new(), game_id);
+    game_list_m
+        .lock()
+        .unwrap()
+        .insert(game_id as usize, new_game);
+    id_game_map_m.lock().unwrap().insert(player_one_id, game_id);
+    let res_msg = join_game(&game_list_m, &id_game_map_m, client_id, &cli_msg);
+    assert_eq!(res_msg.status, Status::Ok);
+    assert_eq!(res_msg.headers, Headers::Response);
+    assert_eq!(res_msg.command, Commands::JoinGame);
+    assert_eq!(res_msg.data, "Joined Game ".to_string());
+    assert_eq!(
+        res_msg.game_state,
+        *game_list_m.lock().unwrap().get(game_id as usize).unwrap()
+    );
+    assert!(id_game_map_m.lock().unwrap().contains_key(&player_one_id));
+    assert!(id_game_map_m.lock().unwrap().contains_key(&client_id));
+    assert_eq!(
+        *(id_game_map_m.lock().unwrap().get(&player_one_id).unwrap()),
+        game_id
+    );
+    assert_eq!(
+        *(id_game_map_m.lock().unwrap().get(&client_id).unwrap()),
+        game_id
+    );
+}
+
 /// Remove a client from the list of active users and send the message
 /// that the client should be killed
 fn client_disconnect(
@@ -202,7 +246,10 @@ fn test_client_disconnect() {
     let nick: String = "asdf".to_string();
     let client_id: u32 = 10;
     active_nicks_m.lock().unwrap().insert(nick.clone());
-    id_nick_map_m.lock().unwrap().insert(client_id, nick.clone());
+    id_nick_map_m
+        .lock()
+        .unwrap()
+        .insert(client_id, nick.clone());
     let res_msg = client_disconnect(&active_nicks_m, &id_nick_map_m, client_id);
     assert_eq!(res_msg.status, Status::Ok);
     assert_eq!(res_msg.headers, Headers::Response);
@@ -280,7 +327,10 @@ fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
         headers: Headers::Read,
         command: Commands::Reply,
         game_status: GameStatus::InGame,
-        data: format!("Player Id {} made move from slot {}", &client_id, &move_to_make),
+        data: format!(
+            "Player Id {} made move from slot {}",
+            &client_id, &move_to_make
+        ),
         game_state: game.clone(),
     }
 }
@@ -302,5 +352,8 @@ fn test_make_move_returns_message() {
     assert_eq!(ret_msg.headers, Headers::Read);
     assert_eq!(ret_msg.command, Commands::Reply);
     assert_eq!(ret_msg.game_status, GameStatus::InGame);
-    assert_eq!(ret_msg.data, "Player Id 1 made move from slot 4".to_string());
+    assert_eq!(
+        ret_msg.data,
+        "Player Id 1 made move from slot 4".to_string()
+    );
 }
