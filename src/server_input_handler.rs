@@ -43,7 +43,7 @@ pub fn handle_out_of_game(
 }
 
 // --------------- out of game READ functions --------------- //
-pub fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id: u32) -> Msg {
+fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id: u32) -> Msg {
     let id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
     let nickname = id_nick_map_unlocked.get(&client_id).unwrap();
     Msg {
@@ -56,7 +56,7 @@ pub fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, clien
     }
 }
 
-pub fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
+fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let game_list_unlocked = game_list_mutex.lock().unwrap();
     let game_list_string: String = game_list_unlocked
         .iter()
@@ -73,7 +73,7 @@ pub fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     }
 }
 
-pub fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Msg {
+fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Msg {
     let active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
     let active_nicks_string: String = active_nicks_unlocked
         .iter()
@@ -91,7 +91,7 @@ pub fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Ms
 // --------------- out of game READ functions --------------- //
 /// Sets a clients nickname based on a passed-in string.  Compares across
 /// already registered nicknames and doesn't allow duplicate values
-pub fn set_nickname(
+fn set_nickname(
     active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
     client_msg: &Msg,
@@ -193,6 +193,25 @@ fn client_disconnect(
     }
 }
 
+#[test]
+fn test_client_disconnect() {
+    let active_nicks: HashSet<String> = HashSet::new();
+    let active_nicks_m: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(active_nicks));
+    let id_nick_map: HashMap<u32, String> = HashMap::new();
+    let id_nick_map_m: Arc<Mutex<HashMap<u32, String>>> = Arc::new(Mutex::new(id_nick_map));
+    let nick: String = "asdf".to_string();
+    let client_id: u32 = 10;
+    active_nicks_m.lock().unwrap().insert(nick.clone());
+    id_nick_map_m.lock().unwrap().insert(client_id, nick.clone());
+    let res_msg = client_disconnect(&active_nicks_m, &id_nick_map_m, client_id);
+    assert_eq!(res_msg.status, Status::Ok);
+    assert_eq!(res_msg.headers, Headers::Response);
+    assert_eq!(res_msg.command, Commands::KillClient);
+    assert_eq!(res_msg.data, format!("Nick {} successfully booted", nick));
+    assert!(!active_nicks_m.lock().unwrap().contains(&nick));
+    assert!(!id_nick_map_m.lock().unwrap().contains_key(&client_id));
+}
+
 // --------------- in game --------------- //
 pub fn handle_in_game(
     cmd: Commands,
@@ -218,7 +237,7 @@ pub fn handle_in_game(
     if cmd == Commands::GetCurrentGamestate {
         return current_state(game);
     } else if cmd == Commands::MakeMove {
-        return make_move(client_msg, game);
+        return make_move(client_msg, game, client_id);
     }
     Msg {
         status: Status::NotOk,
@@ -241,7 +260,19 @@ fn current_state(game: &GameState) -> Msg {
     }
 }
 
-pub fn make_move(client_msg: &Msg, game: &mut GameState) -> Msg {
+#[test]
+fn test_current_state_message() {
+    let game = GameState::new(1, "asdf".to_string(), 1);
+    let ret_msg = current_state(&game);
+    assert_eq!(ret_msg.status, Status::Ok);
+    assert_eq!(ret_msg.headers, Headers::Read);
+    assert_eq!(ret_msg.command, Commands::Reply);
+    assert_eq!(ret_msg.game_status, GameStatus::InGame);
+    assert_eq!(ret_msg.game_state, game);
+    assert_eq!(ret_msg.data, "Current Game State".to_string());
+}
+
+fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
     let move_to_make: u32 = client_msg.data.parse().unwrap();
     game.make_move(move_to_make as usize);
     Msg {
@@ -249,7 +280,27 @@ pub fn make_move(client_msg: &Msg, game: &mut GameState) -> Msg {
         headers: Headers::Read,
         command: Commands::Reply,
         game_status: GameStatus::InGame,
-        data: "Current Game State".to_string(),
+        data: format!("Player Id {} made move from slot {}", &client_id, &move_to_make),
         game_state: game.clone(),
     }
+}
+
+#[test]
+fn test_make_move_returns_message() {
+    let mut game = GameState::new(1, "asdf".to_string(), 1);
+    let cli_id: u32 = 1;
+    let cli_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::MakeMove,
+        game_status: GameStatus::InGame,
+        data: "4".to_string(),
+        game_state: game.clone(),
+    };
+    let ret_msg = make_move(&cli_msg, &mut game, cli_id);
+    assert_eq!(ret_msg.status, Status::Ok);
+    assert_eq!(ret_msg.headers, Headers::Read);
+    assert_eq!(ret_msg.command, Commands::Reply);
+    assert_eq!(ret_msg.game_status, GameStatus::InGame);
+    assert_eq!(ret_msg.data, "Player Id 1 made move from slot 4".to_string());
 }
