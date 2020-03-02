@@ -322,15 +322,36 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
 }
 
 fn render_board(msg: &Msg) {
-    println!("{:?}", msg.game_state.get_board());
-    println!(
-        "Player One score: {}",
-        msg.game_state.get_player_one_score()
-    );
-    println!(
-        "Player Two score: {}",
-        msg.game_state.get_player_two_score()
-    );
+    let board = msg.game_state.get_board();
+    // println!("{:?}", msg.game_state.get_board());
+    println!("\nPlayer 1 at top, Player 2 at bottom:");
+
+    // Player1
+    print!("\t  ");
+    for (i, item) in board.iter().enumerate().take(5).skip(1) {
+        print!("  #{}: {} |", i, item)
+    }
+    for (i, item) in board.iter().enumerate().take(6).skip(5) {
+        print!(" #{}: {} |", i, item)
+    }
+    println!(" #{}: {} ", &6, board[6]);
+
+    // Scores
+    print!("\t{} ", board[0]);
+    for _i in 1..5 {
+        print!("--------+")
+    }
+    for _i in 4..5 {
+        print!("-------+")
+    }
+    println!("-------- {}", board[7]);
+
+    // Player2
+    print!("\t  ");
+    for (i, item) in board.iter().enumerate().take(14).skip(9).rev() {
+        print!(" #{}: {} |", i, item)
+    }
+    println!(" #{}: {} \n", &8, board[8]);
 }
 
 fn leave_game() -> Msg {
