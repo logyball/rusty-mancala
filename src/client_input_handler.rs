@@ -287,7 +287,11 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     let final_move: usize;
     loop {
         let mut move_to_make = String::new();
-        print!("Which slot do you want to move: ");
+        if am_i_player_one {
+            println!("Player 1, enter your move (1 - 6)");
+        } else {
+            println!("Player 2, enter your move (8 - 13)");
+        }
         stdout.flush().expect("Error flushing buffer");
         stdin
             .read_line(&mut move_to_make)
