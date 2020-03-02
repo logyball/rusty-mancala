@@ -7,17 +7,36 @@ use std::{thread, time};
 
 // --------------- out of game --------------- //
 
-/// Initial input screen.  Asks the client for a host and port
+/// Initial input screen.  Calls helper functions to get valid host and port
 /// to connect to.  Returns a connection string.
 pub fn initial_screen() -> String {
+    let host: String = get_host_input();
+    let port_int: u32 = get_port_input();
+
+    host.trim().to_string() + &":".to_string() + &port_int.to_string()
+}
+
+fn get_host_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut host = String::new();
-    let port_int: u32;
+    loop {
+        print!("Enter a host: ");
+        stdout.flush().expect("Error flushing buffer");
+        stdin.read_line(&mut host).expect("Error reading in");
+        if host.trim().is_empty() {
+            println!("Cannot have an empty host!");
+            continue;
+        }
+        break;
+    }
+    host
+}
 
-    print!("Enter a host: ");
-    stdout.flush().expect("Error flushing buffer");
-    stdin.read_line(&mut host).expect("Error reading in");
+fn get_port_input() -> u32 {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    let port_int: u32;
     loop {
         let mut port = String::new();
         print!("Enter a port: ");
@@ -34,8 +53,7 @@ pub fn initial_screen() -> String {
             }
         }
     }
-    let trimmed_host = host.trim().to_string();
-    trimmed_host + &":".to_string() + &port_int.to_string()
+    port_int
 }
 
 /// Returns the first message necessary for the client
