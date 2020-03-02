@@ -2,6 +2,7 @@ use crate::game_objects::*;
 use crate::proto::*;
 use std::io;
 use std::io::prelude::*;
+use std::ops::Range;
 use std::{thread, time};
 
 // --------------- out of game --------------- //
@@ -189,9 +190,6 @@ fn client_disconnect() -> Msg {
 
 /// Main functionality to handle client IO while in game.  Collections
 /// moves while client's turn is active.
-///
-/// TODO - implement bounds handling for the client.  Dont allow moves
-/// that are illegal.
 pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     if server_msg.status != Status::Ok {
         return Msg {
@@ -218,10 +216,10 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     if (am_i_player_one && server_msg.game_state.player_one_turn)
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
+        make_move(am_i_player_one, &server_msg.game_state)
+    } else {
         println!("Waiting for my turn...");
         wait_for_my_turn()
-    } else {
-        make_move()
     }
 }
 
@@ -243,21 +241,65 @@ fn wait_for_my_turn() -> Msg {
     get_current_gamestate()
 }
 
-fn make_move() -> Msg {
+fn check_is_move_valid(move_to_make: usize, game_state: &GameState, am_i_player_one: bool) -> bool {
+    let range_of_valid_moves = if am_i_player_one {
+        Range {
+            start: 1,
+            end: SLOTS,
+        }
+    } else {
+        Range {
+            start: SLOTS + 1,
+            end: BOARD_LENGTH,
+        }
+    };
+    if range_of_valid_moves.contains(&move_to_make) && game_state.game_board[move_to_make] != 0 {
+        return true;
+    }
+    if !range_of_valid_moves.contains(&move_to_make) {
+        println!(
+            "Move was not in the playable range of moves, which is {} -> {} for you.",
+            &range_of_valid_moves.start,
+            &range_of_valid_moves.end - 1
+        );
+    } else if game_state.game_board[move_to_make] == 0 {
+        println!("slot you selected (slot {}) is empty!", &move_to_make);
+    }
+    false
+}
+
+fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let mut move_to_make = String::new();
-    print!("Which slot do you want to move: ");
-    stdout.flush().expect("Error flushing buffer");
-    stdin
-        .read_line(&mut move_to_make)
-        .expect("Error reading in");
+    let final_move: usize;
+    loop {
+        let mut move_to_make = String::new();
+        print!("Which slot do you want to move: ");
+        stdout.flush().expect("Error flushing buffer");
+        stdin
+            .read_line(&mut move_to_make)
+            .expect("Error reading in");
+        let move_to_make_int: usize;
+        match move_to_make.trim().parse() {
+            Ok(x) => {
+                move_to_make_int = x;
+            }
+            Err(e) => {
+                println!("invalid integer + {}!", e);
+                continue;
+            }
+        }
+        if check_is_move_valid(move_to_make_int, cur_game_state, am_i_player_one) {
+            final_move = move_to_make_int;
+            break;
+        }
+    }
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
         command: Commands::MakeMove,
         game_status: GameStatus::InGame,
-        data: move_to_make.trim().to_string(),
+        data: final_move.to_string(),
         game_state: GameState::new_empty(),
     }
 }
@@ -295,7 +337,7 @@ pub fn handle_server_response(
     if !server_msg.data.is_empty() {
         println!("server response: {}", server_msg.data);
     }
-    if server_msg.command == Commands::SetNick && server_msg.status == Status::Ok  {
+    if server_msg.command == Commands::SetNick && server_msg.status == Status::Ok {
         let new_nick: String = server_msg.data.clone();
         *nickname = new_nick;
     }
