@@ -15,9 +15,16 @@ pub fn initial_screen() -> String {
     let mut host = String::new();
     let port_int: u32;
 
-    print!("Enter a host: ");
-    stdout.flush().expect("Error flushing buffer");
-    stdin.read_line(&mut host).expect("Error reading in");
+    loop {
+        print!("Enter a host: ");
+        stdout.flush().expect("Error flushing buffer");
+        stdin.read_line(&mut host).expect("Error reading in");
+        if host.trim().is_empty() {
+            println!("Enter a valid host!");
+            continue;
+        }
+        break;
+    }
     loop {
         let mut port = String::new();
         print!("Enter a port: ");
@@ -108,6 +115,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
 
 // --------------- read functions --------------- //
 fn list_active_games() -> Msg {
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -119,6 +127,7 @@ fn list_active_games() -> Msg {
 }
 
 fn list_active_users() -> Msg {
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -153,6 +162,7 @@ fn join_game() -> Msg {
             }
         }
     }
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
@@ -171,6 +181,7 @@ fn set_nickname() -> Msg {
     print!("Enter new nickname: ");
     stdout.flush().expect("Client input something nonsensical");
     stdin.read_line(&mut nickname).expect("I/O error");
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
@@ -188,6 +199,7 @@ pub fn start_new_game() -> Msg {
     print!("Enter a name of a new game: ");
     stdout.flush().expect("Error flushing buffer");
     stdin.read_line(&mut game_name).expect("Error reading in");
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
@@ -199,6 +211,7 @@ pub fn start_new_game() -> Msg {
 }
 
 fn client_disconnect() -> Msg {
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
