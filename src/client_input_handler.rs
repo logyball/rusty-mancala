@@ -238,23 +238,26 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
         };
     }
     if server_msg.command == Commands::GameIsOver {
+        print!("{}[2J", 27 as char);
         println!("Game Over!");
         render_board(server_msg);
         return leave_game();
     }
     if !server_msg.game_state.active {
+        print!("{}[2J", 27 as char);
         println!("Waiting for another player...");
         return wait_for_my_turn();
     }
-    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
+    print!("{}[2J", 27 as char);
     println!("Current game state: ");
     render_board(server_msg);
+    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     if (am_i_player_one && server_msg.game_state.player_one_turn)
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
         make_move(am_i_player_one, &server_msg.game_state)
     } else {
-        println!("Waiting for my turn...");
+        println!("\n\n\tWaiting for my turn...\n\n\n");
         wait_for_my_turn()
     }
 }
@@ -272,7 +275,7 @@ fn get_current_gamestate() -> Msg {
 }
 
 fn wait_for_my_turn() -> Msg {
-    let two_sec = time::Duration::from_secs(2);
+    let two_sec = time::Duration::from_secs(4);
     thread::sleep(two_sec);
     get_current_gamestate()
 }
