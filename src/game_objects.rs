@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-const SLOTS: usize = 7; // there are 6 playable slots and one goal slot
+pub const SLOTS: usize = 7; // there are 6 playable slots and one goal slot
 const STARTING_STONES: u8 = 4;
-const BOARD_LENGTH: usize = SLOTS * 2;
+pub const BOARD_LENGTH: usize = SLOTS * 2;
 
 /// Object holding all of a game's state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
