@@ -191,7 +191,7 @@ fn join_game(
     let mut id_game_map_unlocked = id_game_map_mutex.lock().unwrap();
     let game_id: usize = client_msg.data.parse().unwrap();
     if game_list_unlocked.len() == 0 {
-        Msg {
+        return Msg {
             status: Status::Ok,
             headers: Headers::Response,
             command: Commands::JoinGame,
@@ -200,7 +200,7 @@ fn join_game(
             game_state: GameState::new_empty(),
         }
     } else if game_id > game_list_unlocked.len() - 1 {
-        Msg {
+        return Msg {
             status: Status::Ok,
             headers: Headers::Response,
             command: Commands::JoinGame,
@@ -208,18 +208,27 @@ fn join_game(
             data: "Invalid game id entered. View active game list for valid game id's".to_string(),
             game_state: GameState::new_empty(),
         }
-    } else {
-        let game: &mut GameState = &mut game_list_unlocked[game_id];
-        game.add_player_two(client_id);
-        id_game_map_unlocked.insert(client_id, game.game_id);
-        Msg {
+    }
+    let game: &mut GameState = &mut game_list_unlocked[game_id];
+    if game.active {
+        return Msg {
             status: Status::Ok,
             headers: Headers::Response,
             command: Commands::JoinGame,
-            game_status: GameStatus::InGame,
-            data: format!("Joined Game {}", &game.game_name),
-            game_state: game.clone(),
+            game_status: GameStatus::NotInGame,
+            data: format!("Game ID {} is full, please pick a different one", &game_id),
+            game_state: GameState::new_empty(),
         }
+    }
+    game.add_player_two(client_id);
+    id_game_map_unlocked.insert(client_id, game.game_id);
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Response,
+        command: Commands::JoinGame,
+        game_status: GameStatus::InGame,
+        data: format!("Joined Game {}", &game.game_name),
+        game_state: game.clone(),
     }
 }
 
@@ -250,6 +259,7 @@ fn test_join_game() {
     assert_eq!(res_msg.status, Status::Ok);
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::JoinGame);
+    assert_eq!(res_msg.game_status, GameStatus::InGame);
     assert_eq!(res_msg.data, "Joined Game ".to_string());
     assert_eq!(
         res_msg.game_state,
@@ -265,6 +275,44 @@ fn test_join_game() {
         *(id_game_map_m.lock().unwrap().get(&client_id).unwrap()),
         game_id
     );
+}
+
+#[test]
+fn test_cant_join_active_game() {
+    let game_list: Vec<GameState> = vec![];
+    let game_list_m: Arc<Mutex<Vec<GameState>>> = Arc::new(Mutex::new(game_list));
+    let id_game_map: HashMap<u32, u32> = HashMap::new();
+    let id_game_map_m: Arc<Mutex<HashMap<u32, u32>>> = Arc::new(Mutex::new(id_game_map));
+    let player_one_id: u32 = 5;
+    let player_two_id: u32 = 10;
+    let client_id: u32 = 15;
+    let game_id: u32 = 0;
+    let cli_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::JoinGame,
+        game_status: GameStatus::NotInGame,
+        data: "0".to_string(),
+        game_state: GameState::new_empty(),
+    };
+    let new_game = GameState::new(player_one_id, String::new(), game_id);
+    game_list_m
+        .lock()
+        .unwrap()
+        .insert(game_id as usize, new_game);
+    id_game_map_m.lock().unwrap().insert(player_one_id, game_id);
+    join_game(&game_list_m, &id_game_map_m, player_two_id, &cli_msg);
+    let res_msg = join_game(&game_list_m, &id_game_map_m, client_id, &cli_msg);
+    assert_eq!(res_msg.status, Status::Ok);
+    assert_eq!(res_msg.headers, Headers::Response);
+    assert_eq!(res_msg.command, Commands::JoinGame);
+    assert_eq!(res_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(res_msg.data, "Game ID 0 is full, please pick a different one".to_string());
+    assert_eq!(
+        res_msg.game_state,
+        GameState::new_empty()
+    );
+    assert!(!id_game_map_m.lock().unwrap().contains_key(&client_id));
 }
 
 /// Remove a client from the list of active users and send the message
