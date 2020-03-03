@@ -242,18 +242,18 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
             game_state: GameState::new_empty(),
         };
     }
+    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     if server_msg.command == Commands::GameIsOver {
         println!("Game Over!");
-        render_board(server_msg);
+        render_board(&server_msg.game_state.get_board(), am_i_player_one);
         return leave_game();
     }
     if !server_msg.game_state.active {
         println!("Waiting for another player...");
         return wait_for_my_turn();
     }
-    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     println!("Current game state: ");
-    render_board(server_msg);
+    render_board(&server_msg.game_state.get_board(), am_i_player_one);
     if (am_i_player_one && server_msg.game_state.player_one_turn)
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
@@ -315,7 +315,11 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     let final_move: usize;
     loop {
         let mut move_to_make = String::new();
-        print!("Which slot do you want to move: ");
+        if am_i_player_one {
+            println!("Player 1, enter your move (1 - 6)");
+        } else {
+            println!("Player 2, enter your move (8 - 13)");
+        }
         stdout.flush().expect("Error flushing buffer");
         stdin
             .read_line(&mut move_to_make)
@@ -345,16 +349,64 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     }
 }
 
-fn render_board(msg: &Msg) {
-    println!("{:?}", msg.game_state.get_board());
-    println!(
-        "Player One score: {}",
-        msg.game_state.get_player_one_score()
-    );
-    println!(
-        "Player Two score: {}",
-        msg.game_state.get_player_two_score()
-    );
+fn render_board(board: &[u8; BOARD_LENGTH], am_i_player_one: bool) {
+    let range_top = if am_i_player_one {
+        Range {
+            start: SLOTS + 2,
+            end: BOARD_LENGTH,
+        }
+    } else {
+        Range {
+            start: 2,
+            end: SLOTS,
+        }
+    };
+    let range_bottom = if am_i_player_one {
+        Range {
+            start: 1,
+            end: SLOTS - 1,
+        }
+    } else {
+        Range {
+            start: SLOTS + 1,
+            end: BOARD_LENGTH - 1,
+        }
+    };
+    let goal1 = if am_i_player_one { 0 } else { SLOTS };
+    let goal2 = if am_i_player_one { SLOTS } else { 0 };
+    // Player1
+    print!("\t  ");
+    for i in range_top.rev() {
+        if i < 10 {
+            print!("  #{}: {} |", i, board[i]);
+        } else {
+            print!(" #{}: {} |", i, board[i]);
+        }
+    }
+    if am_i_player_one {
+        println!(" #{}: {}", &SLOTS + 1, board[SLOTS + 1])
+    } else {
+        println!(" #{}: {}", &1, board[1])
+    };
+    // Scores
+    print!("\t{} ", board[goal1]);
+    for _i in 1..6 {
+        print!("--------+")
+    }
+    println!("-------- {}", board[goal2]);
+    print!("\t  ");
+    for i in range_bottom {
+        if i < 10 {
+            print!("  #{}: {} |", i, board[i]);
+        } else {
+            print!(" #{}: {} |", i, board[i]);
+        }
+    }
+    if am_i_player_one {
+        println!(" #{}: {}", &SLOTS - 1, board[SLOTS - 1])
+    } else {
+        println!(" #{}: {}", &BOARD_LENGTH - 1, board[BOARD_LENGTH - 1])
+    };
 }
 
 fn leave_game() -> Msg {

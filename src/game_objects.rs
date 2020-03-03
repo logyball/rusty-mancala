@@ -154,14 +154,6 @@ impl GameState {
     pub fn get_board(&self) -> [u8; SLOTS * 2] {
         self.game_board
     }
-
-    pub fn get_player_one_score(&self) -> u8 {
-        self.game_board[self.player_one_goal_slot]
-    }
-
-    pub fn get_player_two_score(&self) -> u8 {
-        self.game_board[self.player_two_goal_slot]
-    }
 }
 
 #[test]
