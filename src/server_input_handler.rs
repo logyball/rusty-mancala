@@ -2,6 +2,7 @@ use crate::game_objects::*;
 use crate::proto::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
+use std::process::id;
 
 // --------------- out of game --------------- //
 
@@ -145,7 +146,7 @@ fn start_new_game(
         headers: Headers::Response,
         command: Commands::MakeNewGame,
         game_status: GameStatus::InGame,
-        data: "New Game".to_string(),
+        data: format!("New Game^{}", &game_id),
         game_state: new_game,
     }
 }
@@ -168,7 +169,7 @@ fn test_start_new_game() {
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::MakeNewGame);
     assert_eq!(res_msg.game_status, GameStatus::InGame);
-    assert_eq!(res_msg.data, "New Game".to_string());
+    assert_eq!(res_msg.data, "New Game^0".to_string());
     assert_eq!(
         res_msg.game_state,
         *game_list_m.lock().unwrap().get(0).unwrap()
@@ -267,6 +268,16 @@ fn test_join_game() {
     );
 }
 
+pub fn remove_client_from_shared_data(
+    active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
+    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
+    client_id: u32) {
+    let mut active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
+    let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
+    let nickname = id_nick_map_unlocked.remove(&client_id).unwrap();
+    active_nicks_unlocked.remove(&nickname);
+}
+
 /// Remove a client from the list of active users and send the message
 /// that the client should be killed
 fn client_disconnect(
@@ -274,10 +285,7 @@ fn client_disconnect(
     id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
     client_id: u32,
 ) -> Msg {
-    let mut active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
-    let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
-    let nickname = id_nick_map_unlocked.remove(&client_id).unwrap();
-    active_nicks_unlocked.remove(&nickname);
+    remove_client_from_shared_data(active_nicks_mutex, id_nick_map_mutex, client_id);
     Msg {
         status: Status::Ok,
         headers: Headers::Response,

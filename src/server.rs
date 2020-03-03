@@ -34,11 +34,16 @@ fn handle_each_client_tcp_connection(
     user_id: u32,
 ) {
     let mut buffer = [0; 512];
+    let mut in_game: bool = false;
+    let mut game_id: u32 = 0;
     loop {
         match stream.read(&mut buffer) {
             Ok(size) => {
                 if size == 0 {
                     info!("Client terminated connection");
+                    if in_game {
+                        // TODO - boot client
+                    }
                     break;
                 }
                 let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
@@ -49,6 +54,11 @@ fn handle_each_client_tcp_connection(
                     .unwrap();
                 let response_from_manager: (u32, Msg) =
                     rec_channel.recv().expect("something wrong");
+                if response_from_manager.1.game_status == GameStatus::InGame && !in_game {
+                    in_game = true;
+                    let tmp: Vec<&str> = response_from_manager.1.data.split('^').collect();
+                    game_id = tmp[1].parse().unwrap();
+                }
                 response_from_manager.1.serialize(&mut buffer);
                 stream.write_all(&buffer).unwrap();
                 stream.flush().unwrap();
