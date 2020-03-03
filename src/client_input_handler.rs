@@ -214,18 +214,18 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
             game_state: GameState::new_empty(),
         };
     }
+    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     if server_msg.command == Commands::GameIsOver {
         println!("Game Over!");
-        render_board(server_msg);
+        render_board(server_msg, am_i_player_one);
         return leave_game();
     }
     if !server_msg.game_state.active {
         println!("Waiting for another player...");
         return wait_for_my_turn();
     }
-    let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     println!("Current game state: ");
-    render_board(server_msg);
+    render_board(server_msg, am_i_player_one);
     if (am_i_player_one && server_msg.game_state.player_one_turn)
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
@@ -321,20 +321,13 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     }
 }
 
-fn render_board(msg: &Msg) {
-    let board = msg.game_state.get_board();
-    println!("\nPlayer 1 at top, Player 2 at bottom:");
-
-    // Player1
+fn render_board_player_one(board: &[u8; BOARD_LENGTH]) {
+    // Player2
     print!("\t  ");
-    for (i, item) in board.iter().enumerate().take(5).skip(1) {
-        print!("  #{}: {} |", i, item)
-    }
-    for (i, item) in board.iter().enumerate().take(6).skip(5) {
+    for (i, item) in board.iter().enumerate().take(14).skip(9).rev() {
         print!(" #{}: {} |", i, item)
     }
-    println!(" #{}: {} ", &6, board[6]);
-
+    println!(" #{}: {}", &8, board[8]);
     // Scores
     print!("\t{} ", board[0]);
     for _i in 1..5 {
@@ -344,13 +337,49 @@ fn render_board(msg: &Msg) {
         print!("-------+")
     }
     println!("-------- {}", board[7]);
-
-    // Player2
+    // Player1
     print!("\t  ");
-    for (i, item) in board.iter().enumerate().take(14).skip(9).rev() {
+    for (i, item) in board.iter().enumerate().take(5).skip(1) {
+        print!("  #{}: {} |", i, item)
+    }
+    for (i, item) in board.iter().enumerate().take(6).skip(5) {
         print!(" #{}: {} |", i, item)
     }
-    println!(" #{}: {} \n", &8, board[8]);
+    println!(" #{}: {} \n", &6, board[6]);
+}
+
+fn render_board_player_two(board: &[u8; BOARD_LENGTH]) {
+    // Player1
+    print!("\t  ");
+    for i in (2..SLOTS).rev() {
+        print!("  #{}: {} |", i, board[i]);
+    };
+    println!(" #{}: {}", &1, board[1]);
+    // Scores
+    print!("\t{} ", board[SLOTS]);
+    for _i in 1..6 {
+        print!("--------+")
+    }
+    println!("-------- {}", board[0]);
+    // Player2
+    print!("\t  ");
+    for i in SLOTS+1..BOARD_LENGTH-1 {
+        if i < 10 {
+            print!("  #{}: {} |", i, board[i]);
+        } else {
+            print!(" #{}: {} |", i, board[i]);
+        }
+    }
+    println!(" #{}: {}", &BOARD_LENGTH-1, board[BOARD_LENGTH-1]);
+}
+
+fn render_board(msg: &Msg, am_i_player_one: bool) {
+    let board = msg.game_state.get_board();
+    if am_i_player_one {
+        render_board_player_one(&board);
+    } else {
+        render_board_player_two(&board);
+    }
 }
 
 fn leave_game() -> Msg {
