@@ -126,6 +126,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
 
 // --------------- read functions --------------- //
 fn list_active_games() -> Msg {
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -137,6 +138,7 @@ fn list_active_games() -> Msg {
 }
 
 fn list_active_users() -> Msg {
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -171,6 +173,7 @@ fn join_game() -> Msg {
             }
         }
     }
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
@@ -189,6 +192,7 @@ fn set_nickname() -> Msg {
     print!("Enter new nickname: ");
     stdout.flush().expect("Client input something nonsensical");
     stdin.read_line(&mut nickname).expect("I/O error");
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
@@ -206,6 +210,7 @@ pub fn start_new_game() -> Msg {
     print!("Enter a name of a new game: ");
     stdout.flush().expect("Error flushing buffer");
     stdin.read_line(&mut game_name).expect("Error reading in");
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
@@ -217,6 +222,7 @@ pub fn start_new_game() -> Msg {
 }
 
 fn client_disconnect() -> Msg {
+    print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -244,14 +250,17 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     }
     let am_i_player_one: bool = my_id == server_msg.game_state.player_one;
     if server_msg.command == Commands::GameIsOver {
+        print!("{}[2J", 27 as char);
         println!("Game Over!");
         render_board(&server_msg.game_state.get_board(), am_i_player_one);
         return leave_game();
     }
     if !server_msg.game_state.active {
+        print!("{}[2J", 27 as char);
         println!("Waiting for another player...");
         return wait_for_my_turn();
     }
+    print!("{}[2J", 27 as char);
     println!("Current game state: ");
     render_board(&server_msg.game_state.get_board(), am_i_player_one);
     if (am_i_player_one && server_msg.game_state.player_one_turn)
@@ -259,7 +268,7 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     {
         make_move(am_i_player_one, &server_msg.game_state)
     } else {
-        println!("Waiting for my turn...");
+        println!("\n\n\tWaiting for my turn...\n\n\n");
         wait_for_my_turn()
     }
 }
@@ -277,7 +286,7 @@ fn get_current_gamestate() -> Msg {
 }
 
 fn wait_for_my_turn() -> Msg {
-    let two_sec = time::Duration::from_secs(2);
+    let two_sec = time::Duration::from_secs(4);
     thread::sleep(two_sec);
     get_current_gamestate()
 }

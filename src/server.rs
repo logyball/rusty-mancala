@@ -151,7 +151,7 @@ fn tcp_connection_manager(
     let listener = TcpListener::bind(connection).unwrap();
     let mut cur_id: u32 = 1;
 
-    info!("Server listening on port 42069");
+    info!("Server listening on {}", connection);
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
