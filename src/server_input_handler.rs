@@ -58,11 +58,15 @@ fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id
 
 fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let game_list_unlocked = game_list_mutex.lock().unwrap();
-    let game_list_string: String = game_list_unlocked
-        .iter()
-        .fold("Available Games: \n".to_string(), |acc, x| {
-            acc + &x.game_id.to_string() + ": " + &x.game_name + "\n"
-        });
+    let game_list_string = if game_list_unlocked.len() == 0 {
+        "No active games available. Please start a new game to begin.".to_string()
+    } else {
+        game_list_unlocked
+            .iter()
+            .fold("Available Games: \n".to_string(), |acc, x| {
+                acc + &x.game_id.to_string() + ": " + &x.game_name + "\n"
+            })
+    };
     Msg {
         status: Status::Ok,
         headers: Headers::Response,
@@ -150,7 +154,6 @@ fn start_new_game(
     }
 }
 
-
 #[test]
 fn test_start_new_game() {
     let game_list: Vec<GameState> = vec![];
@@ -158,12 +161,7 @@ fn test_start_new_game() {
     let id_game_map: HashMap<u32, u32> = HashMap::new();
     let id_game_map_m: Arc<Mutex<HashMap<u32, u32>>> = Arc::new(Mutex::new(id_game_map));
     let client_id: u32 = 10;
-    let res_msg = start_new_game(
-        &game_list_m,
-        &id_game_map_m,
-        client_id,
-        "none".to_string()
-    );
+    let res_msg = start_new_game(&game_list_m, &id_game_map_m, client_id, "none".to_string());
     assert_eq!(res_msg.status, Status::Ok);
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::MakeNewGame);
@@ -174,12 +172,8 @@ fn test_start_new_game() {
         *game_list_m.lock().unwrap().get(0).unwrap()
     );
     assert!(id_game_map_m.lock().unwrap().contains_key(&client_id));
-    assert_eq!(
-        *(id_game_map_m.lock().unwrap().get(&client_id).unwrap()),
-        0
-    );
+    assert_eq!(*(id_game_map_m.lock().unwrap().get(&client_id).unwrap()), 0);
 }
-
 
 fn join_game(
     game_list_mutex: &Arc<Mutex<Vec<GameState>>>,
