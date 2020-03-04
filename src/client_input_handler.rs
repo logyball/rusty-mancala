@@ -80,7 +80,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
     Your current nickname is: {1}.
     Welcome to Mancala.  Please select one of the following options:
         (1) Change Nickname
-        (2) List Active Games
+        (2) List Available Games
         (3) List Active Users
         (4) Start New Game
         (5) Join Game
@@ -99,7 +99,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
                     return set_nickname();
                 }
                 2 => {
-                    return list_active_games();
+                    return list_available_games();
                 }
                 3 => {
                     return list_active_users();
@@ -125,7 +125,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
 }
 
 // --------------- read functions --------------- //
-fn list_active_games() -> Msg {
+fn list_available_games() -> Msg {
     print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
