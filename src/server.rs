@@ -1,3 +1,4 @@
+use crate::client_input_handler::{client_initiate_disconnect, leave_game};
 use crate::game_objects::*;
 use crate::proto::*;
 use crate::server_input_handler::*;
@@ -23,6 +24,24 @@ fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     client_msg
 }
 
+fn handle_client_disconnect(
+    snd_channel: &Arc<Mutex<MsgChanSender>>,
+    rec_channel: &MsgChanReceiver,
+    user_id: u32,
+    in_game: bool,
+) {
+    info!("Client terminated connection");
+    let mut boot_msgs: Vec<Msg> = Vec::new();
+    if in_game {
+        boot_msgs.push(leave_game());
+    }
+    boot_msgs.push(client_initiate_disconnect());
+    for msg in boot_msgs {
+        snd_channel.lock().unwrap().send((user_id, msg)).unwrap();
+        let res = rec_channel.recv().expect("something wrong");
+    }
+}
+
 /// Per-client tcp connection handler
 /// TCP input is received from client connection and message is handled.
 /// Messages are processed by handle_client_input_msg and appropriate actions
@@ -35,15 +54,11 @@ fn handle_each_client_tcp_connection(
 ) {
     let mut buffer = [0; 512];
     let mut in_game: bool = false;
-    let mut game_id: u32 = 0;
     loop {
         match stream.read(&mut buffer) {
             Ok(size) => {
                 if size == 0 {
-                    info!("Client terminated connection");
-                    if in_game {
-                        // TODO - boot client
-                    }
+                    handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
                     break;
                 }
                 let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
@@ -56,8 +71,6 @@ fn handle_each_client_tcp_connection(
                     rec_channel.recv().expect("something wrong");
                 if response_from_manager.1.game_status == GameStatus::InGame && !in_game {
                     in_game = true;
-                    let tmp: Vec<&str> = response_from_manager.1.data.split('^').collect();
-                    game_id = tmp[1].parse().unwrap();
                 }
                 response_from_manager.1.serialize(&mut buffer);
                 stream.write_all(&buffer).unwrap();
@@ -174,9 +187,12 @@ fn tcp_connection_manager(
                         &active_nicks_mutex,
                         &id_nick_map_mutex,
                     );
-                thread::spawn(move || {
-                    handle_each_client_tcp_connection(stream, &channels.0, &channels.1, cur_id);
-                });
+                thread::Builder::new()
+                    .name(format!("thread: {}", cur_id))
+                    .spawn(move || {
+                        handle_each_client_tcp_connection(stream, &channels.0, &channels.1, cur_id);
+                    })
+                    .expect(format!("Error spawning thread for client id: {}", cur_id).as_ref());
                 cur_id += 1;
             }
             Err(e) => {

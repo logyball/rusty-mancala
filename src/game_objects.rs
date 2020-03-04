@@ -55,9 +55,31 @@ impl GameState {
         }
     }
 
-    pub fn add_player_two(&mut self, p_two: u32) {
-        self.player_two = p_two;
-        self.active = true;
+    pub fn add_new_player(&mut self, player_id: u32) {
+        if self.player_one == 0 {
+            self.player_one = player_id;
+        } else if self.player_two == 0 {
+            self.player_two = player_id;
+        }
+        if self.player_one != 0 && self.player_two != 0 {
+            self.active = true;
+        }
+    }
+
+    pub fn remove_player(&mut self, player_id: u32) {
+        if self.player_one == player_id {
+            self.player_one = 0;
+        } else if self.player_two == player_id {
+            self.player_two = 0;
+        }
+        if self.player_one == 0 || self.player_two == 0 {
+            let mut init_game_board = [STARTING_STONES; SLOTS * 2];
+            init_game_board[SLOTS] = 0;
+            init_game_board[0] = 0;
+            self.game_board = init_game_board;
+            self.active = false;
+        }
+        info!("Removed player {}, game is now: {:?}", player_id, self);
     }
 
     //noinspection ALL - don't have IDE warnings
@@ -181,14 +203,14 @@ fn test_game_state_init_values_are_correct() {
 fn test_game_becomes_active_after_adding_player_two() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     assert!(!gs.active);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     assert!(gs.active);
 }
 
 #[test]
 fn test_game_state_updates_after_one_move() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     let mut init_game_board = [STARTING_STONES; SLOTS * 2];
     init_game_board[SLOTS] = 0;
     init_game_board[0] = 0;
@@ -199,7 +221,7 @@ fn test_game_state_updates_after_one_move() {
 #[test]
 fn test_turn_changes_after_making_move() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     let turn1: bool = gs.player_one_turn;
     gs.make_move(1);
     let turn2: bool = gs.player_one_turn;
@@ -216,7 +238,7 @@ fn test_turn_changes_after_making_move() {
 #[test]
 fn test_scoring_turns_dont_change_players() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     let turn1: bool = gs.player_one_turn;
     gs.make_move(3);
     let turn2: bool = gs.player_one_turn;
@@ -227,7 +249,7 @@ fn test_scoring_turns_dont_change_players() {
 fn test_captures() {
     // this test assumes SLOTS = 7 and starting_stones = 4
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     gs.make_move(6);
     gs.make_move(11);
     let turn1: bool = gs.player_one_turn;
@@ -243,9 +265,9 @@ fn test_captures() {
 #[test]
 fn test_collect_remaining() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     let mut gs2: GameState = GameState::new(1, "name".to_string(), 0);
-    gs.add_player_two(1);
+    gs.add_new_player(1);
     gs.collect_remaining_stones();
     gs2.make_move(6);
     gs2.collect_remaining_stones();
