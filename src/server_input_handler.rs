@@ -60,7 +60,9 @@ fn list_available_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let game_list_unlocked = game_list_mutex.lock().unwrap();
     let mut active_games: Vec<&GameState> = Vec::new();
     for x in game_list_unlocked.iter() {
-        if !x.active { active_games.push(x) };
+        if !x.active {
+            active_games.push(x)
+        };
     }
     let game_list_string = if active_games.is_empty() {
         "No available games. Please start a new game to begin.".to_string()
@@ -69,10 +71,7 @@ fn list_available_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
             .iter()
             .fold("Available Games: \n".to_string(), |acc, x| {
                 if !&x.active {
-                    acc + &x.game_id.to_string()
-                        + ": "
-                        + &x.game_name
-                        + "\n"
+                    acc + &x.game_id.to_string() + ": " + &x.game_name + "\n"
                 } else {
                     acc + ""
                 }
@@ -98,7 +97,10 @@ fn test_list_available_games() {
     assert_eq!(cli_msg.command, Commands::Reply);
     assert_eq!(cli_msg.game_status, GameStatus::NotInGame);
     assert_eq!(cli_msg.game_state, GameState::new_empty());
-    assert_eq!(cli_msg.data, "No available games. Please start a new game to begin.");
+    assert_eq!(
+        cli_msg.data,
+        "No available games. Please start a new game to begin."
+    );
     let id_map: HashMap<u32, u32> = HashMap::new();
     let id_map_mutex = Arc::new(Mutex::new(id_map));
     let game_name = "name".to_string();
@@ -134,9 +136,18 @@ fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Msg {
 fn test_list_active_users() {
     let active_nicks: HashSet<String> = HashSet::new();
     let active_nicks_mutex = Arc::new(Mutex::new(active_nicks));
-    active_nicks_mutex.lock().unwrap().insert("asdf1".to_string());
-    active_nicks_mutex.lock().unwrap().insert("asdf2".to_string());
-    active_nicks_mutex.lock().unwrap().insert("asdf3".to_string());
+    active_nicks_mutex
+        .lock()
+        .unwrap()
+        .insert("asdf1".to_string());
+    active_nicks_mutex
+        .lock()
+        .unwrap()
+        .insert("asdf2".to_string());
+    active_nicks_mutex
+        .lock()
+        .unwrap()
+        .insert("asdf3".to_string());
     let cli_msg = list_active_users(&active_nicks_mutex);
     assert_eq!(cli_msg.status, Status::Ok);
     assert_eq!(cli_msg.headers, Headers::Response);
