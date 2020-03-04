@@ -38,7 +38,7 @@ fn handle_client_disconnect(
     boot_msgs.push(client_initiate_disconnect());
     for msg in boot_msgs {
         snd_channel.lock().unwrap().send((user_id, msg)).unwrap();
-        let res = rec_channel.recv().expect("something wrong");
+        rec_channel.recv().expect("something wrong");
     }
 }
 
@@ -192,7 +192,7 @@ fn tcp_connection_manager(
                     .spawn(move || {
                         handle_each_client_tcp_connection(stream, &channels.0, &channels.1, cur_id);
                     })
-                    .expect(format!("Error spawning thread for client id: {}", cur_id).as_ref());
+                    .unwrap_or_else(|_| panic!("Error spawning thread for client id: {}", cur_id));
                 cur_id += 1;
             }
             Err(e) => {

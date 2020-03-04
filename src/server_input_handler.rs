@@ -455,9 +455,9 @@ pub fn handle_in_game(
         };
     }
     match cmd {
-        Commands::GetCurrentGamestate => return current_state(game),
-        Commands::MakeMove => return make_move(client_msg, game, client_id),
-        Commands::LeaveGame => return leave_game(&mut id_game_map_unlocked, client_id, game),
+        Commands::GetCurrentGamestate => current_state(game),
+        Commands::MakeMove => make_move(client_msg, game, client_id),
+        Commands::LeaveGame => leave_game(&mut id_game_map_unlocked, client_id, game),
         _ => Msg {
             status: Status::NotOk,
             headers: Headers::Read,
