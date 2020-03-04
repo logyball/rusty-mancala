@@ -1,0 +1,13 @@
+[Unit]
+Description=rusty mancala service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=ec2-user
+ExecStart=/home/ec2-user/rusty-mancala/target/debug/rusty-mancala
+
+[Install]
+WantedBy=multi-user.target
