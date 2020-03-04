@@ -157,7 +157,7 @@ fn tcp_connection_manager(
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
-    let connection = "localhost:42069";
+    let connection = "0.0.0.0:4567";
     let listener = TcpListener::bind(connection).unwrap();
     let mut cur_id: u32 = 1;
 
