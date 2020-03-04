@@ -18,7 +18,7 @@ pub fn handle_out_of_game(
 ) -> Msg {
     match cmd {
         Commands::InitSetup => initial_setup(id_nick_map_mutex, client_id),
-        Commands::ListGames => list_active_games(game_list_mutex),
+        Commands::ListGames => list_available_games(game_list_mutex),
         Commands::ListUsers => list_active_users(active_nicks_mutex),
         Commands::SetNick => {
             set_nickname(active_nicks_mutex, id_nick_map_mutex, client_msg, client_id)
@@ -56,15 +56,26 @@ fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id
     }
 }
 
-fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
+fn list_available_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let game_list_unlocked = game_list_mutex.lock().unwrap();
-    let game_list_string = if game_list_unlocked.len() == 0 {
-        "No active games available. Please start a new game to begin.".to_string()
+    let mut active_games: Vec<&GameState> = Vec::new();
+    for x in game_list_unlocked.iter() {
+        if !x.active { active_games.push(x) };
+    }
+    let game_list_string = if active_games.is_empty() {
+        "No available games. Please start a new game to begin.".to_string()
     } else {
-        game_list_unlocked
+        active_games
             .iter()
             .fold("Available Games: \n".to_string(), |acc, x| {
-                acc + &x.game_id.to_string() + ": " + &x.game_name + "\n"
+                if !&x.active {
+                    acc + &x.game_id.to_string()
+                        + ": "
+                        + &x.game_name
+                        + "\n"
+                } else {
+                    acc + ""
+                }
             })
     };
     Msg {
@@ -75,6 +86,33 @@ fn list_active_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
         data: game_list_string,
         game_state: GameState::new_empty(),
     }
+}
+
+#[test]
+fn test_list_available_games() {
+    let game_list: Vec<GameState> = Vec::new();
+    let game_list_mutex = Arc::new(Mutex::new(game_list));
+    let mut cli_msg = list_available_games(&game_list_mutex);
+    assert_eq!(cli_msg.status, Status::Ok);
+    assert_eq!(cli_msg.headers, Headers::Response);
+    assert_eq!(cli_msg.command, Commands::Reply);
+    assert_eq!(cli_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(cli_msg.game_state, GameState::new_empty());
+    assert_eq!(cli_msg.data, "No available games. Please start a new game to begin.");
+    let id_map: HashMap<u32, u32> = HashMap::new();
+    let id_map_mutex = Arc::new(Mutex::new(id_map));
+    let game_name = "name".to_string();
+    let client_id: u32 = 1;
+    start_new_game(&game_list_mutex, &id_map_mutex, client_id, game_name);
+    cli_msg = list_available_games(&game_list_mutex);
+    assert_eq!(cli_msg.status, Status::Ok);
+    assert_eq!(cli_msg.headers, Headers::Response);
+    assert_eq!(cli_msg.command, Commands::Reply);
+    assert_eq!(cli_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(cli_msg.game_state, GameState::new_empty());
+    assert!(cli_msg.data.contains("name"));
+    assert!(cli_msg.data.contains("0"));
+    assert!(!cli_msg.data.contains("No available games"));
 }
 
 fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Msg {
@@ -90,6 +128,24 @@ fn list_active_users(active_nicks_mutex: &Arc<Mutex<HashSet<String>>>) -> Msg {
         data: active_nicks_string,
         game_state: GameState::new_empty(),
     }
+}
+
+#[test]
+fn test_list_active_users() {
+    let active_nicks: HashSet<String> = HashSet::new();
+    let active_nicks_mutex = Arc::new(Mutex::new(active_nicks));
+    active_nicks_mutex.lock().unwrap().insert("asdf1".to_string());
+    active_nicks_mutex.lock().unwrap().insert("asdf2".to_string());
+    active_nicks_mutex.lock().unwrap().insert("asdf3".to_string());
+    let cli_msg = list_active_users(&active_nicks_mutex);
+    assert_eq!(cli_msg.status, Status::Ok);
+    assert_eq!(cli_msg.headers, Headers::Response);
+    assert_eq!(cli_msg.command, Commands::Reply);
+    assert_eq!(cli_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(cli_msg.game_state, GameState::new_empty());
+    assert!(cli_msg.data.contains("asdf1"));
+    assert!(cli_msg.data.contains("asdf2"));
+    assert!(cli_msg.data.contains("asdf3"));
 }
 
 // --------------- out of game READ functions --------------- //
@@ -190,18 +246,19 @@ fn join_game(
             headers: Headers::Response,
             command: Commands::JoinGame,
             game_status: GameStatus::NotInGame,
-            data: "No active games available. Please start a new game to begin.".to_string(),
+            data: "No games available. Please start a new game to begin.".to_string(),
             game_state: GameState::new_empty(),
-        }
+        };
     } else if game_id > game_list_unlocked.len() - 1 {
         return Msg {
             status: Status::Ok,
             headers: Headers::Response,
             command: Commands::JoinGame,
             game_status: GameStatus::NotInGame,
-            data: "Invalid game id entered. View active game list for valid game id's".to_string(),
+            data: "Invalid game id entered. View available game list for valid game id's"
+                .to_string(),
             game_state: GameState::new_empty(),
-        }
+        };
     }
     let game: &mut GameState = &mut game_list_unlocked[game_id];
     if game.active {
@@ -212,7 +269,7 @@ fn join_game(
             game_status: GameStatus::NotInGame,
             data: format!("Game ID {} is full, please pick a different one", &game_id),
             game_state: GameState::new_empty(),
-        }
+        };
     }
     game.add_player_two(client_id);
     id_game_map_unlocked.insert(client_id, game.game_id);
@@ -301,11 +358,11 @@ fn test_cant_join_active_game() {
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::JoinGame);
     assert_eq!(res_msg.game_status, GameStatus::NotInGame);
-    assert_eq!(res_msg.data, "Game ID 0 is full, please pick a different one".to_string());
     assert_eq!(
-        res_msg.game_state,
-        GameState::new_empty()
+        res_msg.data,
+        "Game ID 0 is full, please pick a different one".to_string()
     );
+    assert_eq!(res_msg.game_state, GameState::new_empty());
     assert!(!id_game_map_m.lock().unwrap().contains_key(&client_id));
 }
 
