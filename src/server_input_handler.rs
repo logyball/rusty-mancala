@@ -378,7 +378,7 @@ fn test_cant_join_active_game() {
     assert_eq!(res_msg.game_status, GameStatus::NotInGame);
     assert_eq!(
         res_msg.data,
-        "Game ID 0 is full, please pick a different one".to_string()
+        "Game ID 0 is unavailable, please pick a different one".to_string()
     );
     assert_eq!(res_msg.game_state, GameState::new_empty());
     assert!(!id_game_map_m.lock().unwrap().contains_key(&client_id));
