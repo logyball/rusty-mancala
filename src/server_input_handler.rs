@@ -493,6 +493,18 @@ fn test_current_state_message() {
 }
 
 fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
+    if !game.active {
+        return Msg {
+            status: Status::Ok,
+            headers: Headers::Read,
+            command: Commands::Reply,
+            game_status: GameStatus::InGame,
+            data: format!(
+                "Game not active! your opponent must've disconnected."
+            ),
+            game_state: game.clone(),
+        }
+    }
     let move_to_make: u32 = client_msg.data.parse().unwrap();
     game.make_move(move_to_make as usize);
     Msg {
