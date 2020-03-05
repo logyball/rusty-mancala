@@ -1,7 +1,7 @@
 use crate::client_input_handler::*;
+use crate::constants::*;
 use crate::game_objects::*;
 use crate::proto::*;
-use crate::constants::*;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 

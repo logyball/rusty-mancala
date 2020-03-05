@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::constants::*;
+use serde::{Deserialize, Serialize};
 
 /// Object holding all of a game's state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

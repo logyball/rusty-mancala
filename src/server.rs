@@ -7,8 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{mpsc, Arc, Mutex};
-use std::{thread, time};
-use std::thread::sleep;
+use std::thread;
 
 pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
 pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
@@ -176,13 +175,14 @@ fn set_up_new_client_tcp_connection(
 /// connects. Performs some initialization after connection and then loops
 /// on handling client input.
 fn tcp_connection_manager(
+    port_int: u32,
     client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: Arc<Mutex<MsgChanSender>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
-    let connection = "0.0.0.0:4567";
-    let listener = TcpListener::bind(connection).unwrap();
+    let connection = format!("0.0.0.0:{}", port_int);
+    let listener = TcpListener::bind(&connection).unwrap();
     let mut cur_id: u32 = 1;
 
     info!("Server listening on {}", connection);
@@ -227,7 +227,7 @@ fn tcp_connection_manager(
 ///    - TCP Connection Manager
 ///      Spawns a new thread per client TCP connection and manages IO with the client
 ///      communicates via channels with data manager
-pub fn run_server() {
+pub fn run_server(port_int: u32) {
     let game_list: Vec<GameState> = vec![];
     let game_list_mutex = Arc::new(Mutex::new(game_list));
 
@@ -265,6 +265,7 @@ pub fn run_server() {
         );
     });
     tcp_connection_manager(
+        port_int,
         client_comms_mutex_tcp_manager_copy,
         client_to_server_sender,
         active_nicks_mutex_tcp_copy,

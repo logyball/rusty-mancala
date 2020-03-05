@@ -1,6 +1,6 @@
+use crate::constants::*;
 use crate::game_objects::*;
 use crate::proto::*;
-use crate::constants::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -502,7 +502,7 @@ fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
             game_status: GameStatus::InGame,
             data: "Game not active! your opponent must've disconnected.".to_string(),
             game_state: game.clone(),
-        }
+        };
     }
     let move_to_make: u32 = client_msg.data.parse().unwrap();
     game.make_move(move_to_make as usize);
@@ -541,7 +541,6 @@ fn test_non_active_game_message() {
         "Game not active! your opponent must've disconnected.".to_string()
     );
 }
-
 
 #[test]
 fn test_make_move_returns_message() {
