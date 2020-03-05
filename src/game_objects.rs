@@ -33,7 +33,7 @@ impl GameState {
             player_two_goal_slot: 0,
             player_one_turn: true,
             active: false,
-            game_over: false
+            game_over: false,
         }
     }
 
@@ -51,7 +51,7 @@ impl GameState {
             player_two_goal_slot: 0,
             player_one_turn: false,
             active: false,
-            game_over: false
+            game_over: false,
         }
     }
 
@@ -146,7 +146,7 @@ impl GameState {
 
     pub fn make_move(&mut self, slot_to_move: usize) {
         if self.game_over {
-            return ()
+            return;
         }
         let mut num_of_stones: u8 = self.game_board[slot_to_move];
         let goal_slots: (usize, usize) = self.get_players_goal_slots();
@@ -185,9 +185,13 @@ impl GameState {
         self.game_over = true;
     }
 
-    pub fn get_player_one_score(&self) -> u8 { self.game_board[self.player_one_goal_slot] }
+    pub fn get_player_one_score(&self) -> u8 {
+        self.game_board[self.player_one_goal_slot]
+    }
 
-    pub fn get_player_two_score(&self) -> u8 { self.game_board[self.player_two_goal_slot] }
+    pub fn get_player_two_score(&self) -> u8 {
+        self.game_board[self.player_two_goal_slot]
+    }
 }
 
 #[test]
