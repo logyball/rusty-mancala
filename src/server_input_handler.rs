@@ -64,7 +64,7 @@ fn list_available_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let mut active_games: Vec<&GameState> = Vec::new();
     for x in game_list_unlocked.iter() {
         // TODO - this is p inefficient, should maintain seperate data structure
-        if !x.active {
+        if !x.active && !x.game_over {
             active_games.push(x)
         };
     }
@@ -276,13 +276,13 @@ fn join_game(
         };
     }
     let game: &mut GameState = &mut game_list_unlocked[game_id];
-    if game.active {
+    if game.active || game.game_over {
         return Msg {
             status: Status::Ok,
             headers: Headers::Response,
             command: Commands::JoinGame,
             game_status: GameStatus::NotInGame,
-            data: format!("Game ID {} is full, please pick a different one", &game_id),
+            data: format!("Game ID {} is unavailable, please pick a different one", &game_id),
             game_state: GameState::new_empty(),
         };
     }
@@ -446,12 +446,15 @@ pub fn handle_in_game(
     let game_id = id_game_map_unlocked.get(&client_id).unwrap();
     let game: &mut GameState = &mut game_list_unlocked[*game_id as usize];
     if !game.active && game.player_one != 0 && game.player_two != 0 {
+        let score_1 = game.get_player_one_score();
+        let score_2 = game.get_player_two_score();
+        game.set_game_over();
         return Msg {
             status: Status::Ok,
             headers: Headers::Write,
             command: Commands::GameIsOver,
             game_status: GameStatus::NotInGame,
-            data: "Game Over".to_string(),
+            data: format!("Game Over! Final Score:\n\tPlayer One: {}\n\tPlayer Two: {}\n", score_1, score_2),
             game_state: game.clone(),
         };
     }

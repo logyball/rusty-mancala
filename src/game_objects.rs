@@ -13,6 +13,7 @@ pub struct GameState {
     player_two_goal_slot: usize,
     pub player_one_turn: bool,
     pub active: bool,
+    pub game_over: bool,
 }
 
 impl GameState {
@@ -32,6 +33,7 @@ impl GameState {
             player_two_goal_slot: 0,
             player_one_turn: true,
             active: false,
+            game_over: false
         }
     }
 
@@ -49,6 +51,7 @@ impl GameState {
             player_two_goal_slot: 0,
             player_one_turn: false,
             active: false,
+            game_over: false
         }
     }
 
@@ -142,6 +145,9 @@ impl GameState {
     }
 
     pub fn make_move(&mut self, slot_to_move: usize) {
+        if self.game_over {
+            return ()
+        }
         let mut num_of_stones: u8 = self.game_board[slot_to_move];
         let goal_slots: (usize, usize) = self.get_players_goal_slots();
         self.game_board[slot_to_move] = 0;
@@ -165,6 +171,7 @@ impl GameState {
             self.player_one_turn = !self.player_one_turn;
         }
         if self.is_game_over() {
+            self.game_over = true;
             self.collect_remaining_stones();
             self.active = false;
         }
@@ -173,6 +180,14 @@ impl GameState {
     pub fn get_board(&self) -> [u8; SLOTS * 2] {
         self.game_board
     }
+
+    pub fn set_game_over(&mut self) {
+        self.game_over = true;
+    }
+
+    pub fn get_player_one_score(&self) -> u8 { self.game_board[self.player_one_goal_slot] }
+
+    pub fn get_player_two_score(&self) -> u8 { self.game_board[self.player_two_goal_slot] }
 }
 
 #[test]
