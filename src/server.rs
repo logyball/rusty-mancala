@@ -17,7 +17,7 @@ pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
 /// passed back to data management.
 fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     let client_msg: Msg = bincode::deserialize(&buffer[0..size]).unwrap();
-    info!("TCP data received: {:?}", client_msg);
+    debug!("TCP data received: {:?}", client_msg);
     if client_msg.status != Status::Ok {
         // TODO - some sort of error checking
     }
@@ -87,7 +87,7 @@ fn handle_each_client_tcp_connection(
                 response_from_manager.1.serialize(&mut buffer);
                 stream.write_all(&buffer).unwrap();
                 stream.flush().unwrap();
-                info!("TCP response sent: {:?}", &response_from_manager.1);
+                debug!("TCP response sent: {:?}", &response_from_manager.1);
             }
             Err(e) => {
                 error!("stream object is gone, client most likely disconnected");
