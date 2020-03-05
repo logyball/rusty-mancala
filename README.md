@@ -24,23 +24,6 @@ Enter a host: ec2-52-11-55-180.us-west-2.compute.amazonaws.com
 Enter a port: 4567
 
     Now connected to: ec2-52-11-55-180.us-west-2.compute.amazonaws.com:4567.
-    Your current nickname is: user_11.
-    Welcome to Mancala.  Please select one of the following options:
-        (1) Change Nickname
-        (2) List Available Games
-        (3) List Active Users
-        (4) Start New Game
-        (5) Join Game
-        (6) Disconnect
-
-    Enter your choice: 1
-
-
-Enter new nickname: new_nick
-
-server response: new_nick
-
-    Now connected to: ec2-52-11-55-180.us-west-2.compute.amazonaws.com:4567.
     Your current nickname is: new_nick.
     Welcome to Mancala.  Please select one of the following options:
         (1) Change Nickname
@@ -60,21 +43,8 @@ user_1
 user_8
 user_3
 user_4
-logan
+new_nick
 user_5
-
-
-    Now connected to: ec2-52-11-55-180.us-west-2.compute.amazonaws.com:4567.
-    Your current nickname is: logan.
-    Welcome to Mancala.  Please select one of the following options:
-        (1) Change Nickname
-        (2) List Available Games
-        (3) List Active Users
-        (4) Start New Game
-        (5) Join Game
-        (6) Disconnect
-
-    Enter your choice:
 ```
 
 ##### Rules of Mancala
@@ -136,6 +106,11 @@ Player 2, enter your move (8 - 13)
 ```
 
 This proceeds until the game is finished, at which point both players are returned to the lobby.
+
+
+## Technical Details
+
+
 
 ##### Deployment
 
