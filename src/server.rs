@@ -58,7 +58,15 @@ fn handle_each_client_tcp_connection(
         match stream.read(&mut buffer) {
             Ok(size) => {
                 if size == 0 {
+                    error!("client {} disconnected unexpectedly!", user_id);
                     handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
+                    let res = stream.shutdown(Shutdown::Both);
+                    match res {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Stream had to be force shutdowned: {}", e);
+                        }
+                    }
                     break;
                 }
                 let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
@@ -78,11 +86,7 @@ fn handle_each_client_tcp_connection(
                 info!("TCP response sent: {:?}", &response_from_manager.1);
             }
             Err(_) => {
-                error!(
-                    "An error occurred, terminating connection with {}",
-                    stream.peer_addr().unwrap()
-                );
-                stream.shutdown(Shutdown::Both).unwrap();
+                error!("stream object is gone, client most likely disconnected");
             }
         }
     }
@@ -187,12 +191,17 @@ fn tcp_connection_manager(
                         &active_nicks_mutex,
                         &id_nick_map_mutex,
                     );
-                thread::Builder::new()
+                let t = thread::Builder::new()
                     .name(format!("thread: {}", cur_id))
                     .spawn(move || {
                         handle_each_client_tcp_connection(stream, &channels.0, &channels.1, cur_id);
-                    })
-                    .unwrap_or_else(|_| panic!("Error spawning thread for client id: {}", cur_id));
+                    });
+                match t {
+                    Ok(_) => {}
+                    Err(_) => {
+                        error!("An error occurred, terminating connection");
+                    }
+                }
                 cur_id += 1;
             }
             Err(e) => {
