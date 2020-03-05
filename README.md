@@ -12,7 +12,7 @@ is mostly an exercise to learn the Rust programming language and TCP communicati
 1. Clone this repo
 2. Build the binary
     - `$ cargo build --release`
-3. Alternately, there may be a usable binary on this repo already if we've been extra diligent.  You can just download that.
+3. Alternatively, there may be a usable binary on this repo already if we've been extra diligent.  You can just download that.
 
 ##### To Run Locally
 1. In a terminal, run the binary in server mode.  This will spin up a local server instance
