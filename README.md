@@ -18,14 +18,14 @@ is mostly an exercise to learn the Rust programming language and TCP communicati
 1. In a terminal, run the binary in server mode.  This will spin up a local server instance
     - `$ ./release/rusty-mancala{.exe} -s [PORT NUMBER]`
     - To run with logging enabled, add `-d{dd}` flags.  More `d`s is more verbose.
-2. In a separate terminal, run the client
-    - `$ ./release/rusty-mancala{.exe} -c`
+2. In a separate terminal, run the client.  The default (no command line flags) command line will run the client.
+    - `$ ./release/rusty-mancala{.exe}`
 3. Enter localhost and the port number you specified earlier
 4. Repeat step 2-3 with more terminal windows
 
 ##### To Run Against our Cloud Deployment 
 1. In a terminal, run the client
-    - `$ ./release/rusty-mancala{.exe} -c`
+    - `$ ./release/rusty-mancala{.exe}`
 3. Enter host: `ec2-52-11-55-180.us-west-2.compute.amazonaws.com` 
 4. Enter port: `4567`
 5. Look for a game, change your nickname, or start your own game!
@@ -33,13 +33,13 @@ is mostly an exercise to learn the Rust programming language and TCP communicati
 ##### Notes on Cargo Run
 
 To use `cargo run` as a shorthand for building the binary and running it, you may have to be clever to pass command line 
-flags to the binary and not the `cargo` build system.  For example, on windows, `cargo run -c` is problematic:
+flags to the binary and not the `cargo` build system.  For example, on windows, `cargo run ` is problematic:
 
 ```
-PS> cargo run -c
+PS> cargo run -s 1234
     Finished dev [unoptimized + debuginfo] target(s) in 0.09s
-     Running `target\debug\rusty-mancala.exe -c`
-error: Found argument 'c' which wasn't expected, or isn't valid in this context
+     Running `target\debug\rusty-mancala.exe -s`
+error: Found argument 's' which wasn't expected, or isn't valid in this context
 
 USAGE:
     rusty-mancala.exe [FLAGS] [OPTIONS]
@@ -47,21 +47,20 @@ USAGE:
 For more information try --help
 ```
 
-but running with `cargo run -- -c` works.  [See this thread.](https://stackoverflow.com/questions/15780174/powershell-command-line-parameters-and)
+but running with `cargo run -- -s 1234` works.  [See this thread.](https://stackoverflow.com/questions/15780174/powershell-command-line-parameters-and)
 
-```
-PS> cargo run -- -c
-    Finished dev [unoptimized + debuginfo] target(s) in 0.10s
-     Running `target\debug\rusty-mancala.exe -c`
-Enter a host:
-
+``` 
+PS> cargo run -- -s  1234
+    Finished dev [unoptimized + debuginfo] target(s) in 0.07s
+     Running `target\debug\rusty-mancala.exe -s 1234`
+2020-03-05 13:10:45,685 INFO  [rusty_mancala::server] Server listening on 0.0.0.0:1234
 ```
 
 ##### Example usage:
 ```
-$ cargo run -- -c
+$ cargo run
     Finished dev [unoptimized + debuginfo] target(s) in 0.48s
-     Running `target\debug\rusty-mancala.exe -c`
+     Running `target\debug\rusty-mancala.exe\`
 run client
 Enter a host: ec2-52-11-55-180.us-west-2.compute.amazonaws.com
 Enter a port: 4567
