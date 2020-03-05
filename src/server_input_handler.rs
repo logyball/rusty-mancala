@@ -282,7 +282,10 @@ fn join_game(
             headers: Headers::Response,
             command: Commands::JoinGame,
             game_status: GameStatus::NotInGame,
-            data: format!("Game ID {} is unavailable, please pick a different one", &game_id),
+            data: format!(
+                "Game ID {} is unavailable, please pick a different one",
+                &game_id
+            ),
             game_state: GameState::new_empty(),
         };
     }
@@ -454,7 +457,10 @@ pub fn handle_in_game(
             headers: Headers::Write,
             command: Commands::GameIsOver,
             game_status: GameStatus::NotInGame,
-            data: format!("Game Over! Final Score:\n\tPlayer One: {}\n\tPlayer Two: {}\n", score_1, score_2),
+            data: format!(
+                "Game Over! Final Score:\n\tPlayer One: {}\n\tPlayer Two: {}\n",
+                score_1, score_2
+            ),
             game_state: game.clone(),
         };
     }
