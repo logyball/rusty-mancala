@@ -111,7 +111,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
                     return join_game();
                 }
                 6 => {
-                    return client_disconnect();
+                    return client_initiate_disconnect();
                 }
                 _ => {
                     println!("invalid selection");
@@ -221,8 +221,7 @@ pub fn start_new_game() -> Msg {
     }
 }
 
-fn client_disconnect() -> Msg {
-    print!("{}[2J", 27 as char);
+pub fn client_initiate_disconnect() -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Read,
@@ -418,7 +417,7 @@ fn render_board(board: &[u8; BOARD_LENGTH], am_i_player_one: bool) {
     };
 }
 
-fn leave_game() -> Msg {
+pub fn leave_game() -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Write,

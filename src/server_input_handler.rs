@@ -1,7 +1,7 @@
 use crate::game_objects::*;
 use crate::proto::*;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 // --------------- out of game --------------- //
 
@@ -23,7 +23,9 @@ pub fn handle_out_of_game(
         Commands::SetNick => {
             set_nickname(active_nicks_mutex, id_nick_map_mutex, client_msg, client_id)
         }
-        Commands::KillMe => client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id),
+        Commands::KillMe => {
+            server_handle_client_disconnect(active_nicks_mutex, id_nick_map_mutex, client_id)
+        }
         Commands::MakeNewGame => start_new_game(
             game_list_mutex,
             id_game_map_mutex,
@@ -60,6 +62,7 @@ fn list_available_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let game_list_unlocked = game_list_mutex.lock().unwrap();
     let mut active_games: Vec<&GameState> = Vec::new();
     for x in game_list_unlocked.iter() {
+        // TODO - this is p inefficient, should maintain seperate data structure
         if !x.active {
             active_games.push(x)
         };
@@ -216,7 +219,7 @@ fn start_new_game(
         headers: Headers::Response,
         command: Commands::MakeNewGame,
         game_status: GameStatus::InGame,
-        data: "New Game".to_string(),
+        data: format!("New Game^{}", &game_id),
         game_state: new_game,
     }
 }
@@ -233,7 +236,7 @@ fn test_start_new_game() {
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::MakeNewGame);
     assert_eq!(res_msg.game_status, GameStatus::InGame);
-    assert_eq!(res_msg.data, "New Game".to_string());
+    assert_eq!(res_msg.data, "New Game^0".to_string());
     assert_eq!(
         res_msg.game_state,
         *game_list_m.lock().unwrap().get(0).unwrap()
@@ -282,7 +285,7 @@ fn join_game(
             game_state: GameState::new_empty(),
         };
     }
-    game.add_player_two(client_id);
+    game.add_new_player(client_id);
     id_game_map_unlocked.insert(client_id, game.game_id);
     Msg {
         status: Status::Ok,
@@ -377,17 +380,26 @@ fn test_cant_join_active_game() {
     assert!(!id_game_map_m.lock().unwrap().contains_key(&client_id));
 }
 
-/// Remove a client from the list of active users and send the message
-/// that the client should be killed
-fn client_disconnect(
+pub fn remove_client_from_shared_data(
     active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
     client_id: u32,
-) -> Msg {
+) -> String {
     let mut active_nicks_unlocked = active_nicks_mutex.lock().unwrap();
     let mut id_nick_map_unlocked = id_nick_map_mutex.lock().unwrap();
     let nickname = id_nick_map_unlocked.remove(&client_id).unwrap();
     active_nicks_unlocked.remove(&nickname);
+    nickname
+}
+
+/// Remove a client from the list of active users and send the message
+/// that the client should be killed
+fn server_handle_client_disconnect(
+    active_nicks_mutex: &Arc<Mutex<HashSet<String>>>,
+    id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>,
+    client_id: u32,
+) -> Msg {
+    let nickname = remove_client_from_shared_data(active_nicks_mutex, id_nick_map_mutex, client_id);
     Msg {
         status: Status::Ok,
         headers: Headers::Response,
@@ -411,7 +423,7 @@ fn test_client_disconnect() {
         .lock()
         .unwrap()
         .insert(client_id, nick.clone());
-    let res_msg = client_disconnect(&active_nicks_m, &id_nick_map_m, client_id);
+    let res_msg = server_handle_client_disconnect(&active_nicks_m, &id_nick_map_m, client_id);
     assert_eq!(res_msg.status, Status::Ok);
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::KillClient);
@@ -428,11 +440,11 @@ pub fn handle_in_game(
     client_msg: &Msg,
     client_id: u32,
 ) -> Msg {
-    let id_game_map_unlocked = id_game_map_mutex.lock().unwrap();
+    let mut id_game_map_unlocked = id_game_map_mutex.lock().unwrap();
     let mut game_list_unlocked = game_list_mutex.lock().unwrap();
     let game_id = id_game_map_unlocked.get(&client_id).unwrap();
     let game: &mut GameState = &mut game_list_unlocked[*game_id as usize];
-    if game.player_one != 0 && game.player_two != 0 && !game.active {
+    if !game.active && game.player_one != 0 && game.player_two != 0 {
         return Msg {
             status: Status::Ok,
             headers: Headers::Write,
@@ -442,18 +454,18 @@ pub fn handle_in_game(
             game_state: game.clone(),
         };
     }
-    if cmd == Commands::GetCurrentGamestate {
-        return current_state(game);
-    } else if cmd == Commands::MakeMove {
-        return make_move(client_msg, game, client_id);
-    }
-    Msg {
-        status: Status::NotOk,
-        headers: Headers::Read,
-        command: Commands::Reply,
-        game_status: GameStatus::NotInGame,
-        data: "Somethings wrong".to_string(),
-        game_state: game.clone(),
+    match cmd {
+        Commands::GetCurrentGamestate => current_state(game),
+        Commands::MakeMove => make_move(client_msg, game, client_id),
+        Commands::LeaveGame => leave_game(&mut id_game_map_unlocked, client_id, game),
+        _ => Msg {
+            status: Status::NotOk,
+            headers: Headers::Read,
+            command: Commands::Reply,
+            game_status: GameStatus::NotInGame,
+            data: "Somethings wrong".to_string(),
+            game_state: game.clone(),
+        },
     }
 }
 
@@ -517,4 +529,21 @@ fn test_make_move_returns_message() {
         ret_msg.data,
         "Player Id 1 made move from slot 4".to_string()
     );
+}
+
+fn leave_game(
+    id_game_map_unlocked: &mut MutexGuard<HashMap<u32, u32>>,
+    client_id: u32,
+    game: &mut GameState,
+) -> Msg {
+    id_game_map_unlocked.remove(&client_id);
+    game.remove_player(client_id);
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::GameIsOver,
+        game_status: GameStatus::NotInGame,
+        data: format!("Game Over - client id {} left!", &client_id),
+        game_state: GameState::new_empty(),
+    }
 }
