@@ -1,6 +1,7 @@
 use crate::client_input_handler::*;
 use crate::game_objects::*;
 use crate::proto::*;
+use crate::constants::*;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
@@ -34,7 +35,7 @@ fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, Str
             return (false, String::new(), 0);
         }
     }
-    let nickname_and_id: Vec<&str> = res_msg.data.split('^').collect();
+    let nickname_and_id: Vec<&str> = res_msg.data.split(SEPARATOR).collect();
     (
         true,
         nickname_and_id[0].to_string(),

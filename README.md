@@ -3,7 +3,8 @@
 
 ### Overview
 
-Rusty Mancala is a basic implementation of the standard rules of [Mancala](https://en.wikipedia.org/wiki/Mancala).  It is mostly an exercise to learn the Rust programming language and TCP communication protocols.
+Rusty Mancala is a basic implementation of the standard rules of [Mancala](https://en.wikipedia.org/wiki/Mancala).  It 
+is mostly an exercise to learn the Rust programming language and TCP communication protocols.
 
 ### How to Use
 
@@ -48,7 +49,8 @@ user_5
 ```
 
 ##### Rules of Mancala
-If you are unfamiliar with the rules of Mancala, please see [this lovely instructables article](https://www.instructables.com/id/How-to-play-MANCALA/).
+If you are unfamiliar with the rules of Mancala, please see 
+[this lovely instructables article](https://www.instructables.com/id/How-to-play-MANCALA/).
 
 ### Playing Rusty Mancala
 
@@ -68,7 +70,8 @@ Current game state:
 Player 1, enter your move (1 - 6)
 ```
 
-Player 1 then selects a slot to move their stones around the board from.  Meanwhile, player two is awaiting their turn patiently:
+Player 1 then selects a slot to move their stones around the board from.  Meanwhile, player two is awaiting their turn 
+patiently:
 
 ```shell script
 Current game state:
@@ -80,7 +83,8 @@ Current game state:
         Waiting for my turn...
 ```
 
-Player 1 can make a move, and if it results in the turns changing, then it will be player 2's turn.  Let's say player 1 moves slot 5, which does not result in a turn change.
+Player 1 can make a move, and if it results in the turns changing, then it will be player 2's turn.  Let's say player 1 
+moves slot 5, which does not result in a turn change.
 
 Now player 1 sees:
 
@@ -107,14 +111,130 @@ Player 2, enter your move (8 - 13)
 
 This proceeds until the game is finished, at which point both players are returned to the lobby.
 
+## Details
 
-## Technical Details
+This project is largely implemented via its [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html) Struct 
+in the standard library.
 
+### Server
 
+### Client
 
-##### Deployment
+## Protocol
 
-Server is deployed on AWS.  Connect by building the client, and connecting to host `ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.
+A large part of the communication between the client and the server is over a serialized messaging protocol.  The 
+protocol is loosely defined below.  See the [Protocol](./protocol.txt) documentation for more details.
+
+#### Message Object
+
+```
+{
+    status:         Status,
+    headers:        Headers,
+    command:        Commands,
+    game_status:    GameStatus,
+    data:           String,
+    game_state:     GameState,
+}
+```
+
+The message object is the serialized struct that is sent in between the client and the server and drives all action. It
+is used both in the game and outside of the game.  The general workflow is :
+    
+    - Client collects input from the user
+    - User input is translated into a `Message` struct 
+    - Client serializes message and sends to the server
+    - Server ingests message, deserializes into a `Message` struct
+    - Server takes appropriate action based on message
+    - Server generates message to send to client, serializes it
+    - Server sends message to client
+    - Client ingests server response and prompts user for input
+    - Repeat
+    
+The fields of the message are described below.
+
+##### Status
+
+```
+{
+    Ok,
+    NotOk,
+}
+```
+
+Status is an `enum` containing two values: `Ok` and `NotOk`.  These are used to communicate errors or successful 
+actions for server or client.
+
+##### Headers
+
+```
+{
+    Read,
+    Write,
+    Response,
+}
+```
+
+##### Commands
+
+```
+{
+    InitSetup,
+    SetNick,
+    ListGames,
+    ListUsers,
+    MakeNewGame,
+    JoinGame,
+    LeaveGame,
+    GetCurrentGamestate,
+    MakeMove,
+    GameIsOver,
+    KillMe,
+    KillClient,
+    Reply,
+}
+```
+
+##### Game Status
+
+```
+{
+    InGame,
+    NotInGame
+}
+```
+
+##### Data
+
+Data is a text field that contains metadata about the message sent.  It can be things like the nickname that the user has
+chosen, or an error message that is returned to the client when the server chokes on something.
+
+Examples:
+
+```
+
+```
+
+##### Game State
+
+```
+{
+    player_one:             int,
+    player_two:             int,
+    game_name:              String,
+    game_id:                int,
+    game_board:             [],
+    player_one_goal_slot:   int,
+    player_two_goal_slot:   int,
+    player_one_turn:        bool,
+    active:                 bool,
+}
+```
+
+### Deployment
+
+Server is deployed on AWS.  Connect by building the client, and connecting to host 
+`ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.
 
 ## Authors
 

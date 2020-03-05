@@ -7,7 +7,8 @@ use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{mpsc, Arc, Mutex};
-use std::thread;
+use std::{thread, time};
+use std::thread::sleep;
 
 pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
 pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
@@ -42,6 +43,16 @@ fn handle_client_disconnect(
     }
 }
 
+fn shutdown_stream(stream: &TcpStream) {
+    let res = stream.shutdown(Shutdown::Both);
+    match res {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Stream had to be force shutdowned: {}", e);
+        }
+    }
+}
+
 /// Per-client tcp connection handler
 /// TCP input is received from client connection and message is handled.
 /// Messages are processed by handle_client_input_msg and appropriate actions
@@ -60,13 +71,7 @@ fn handle_each_client_tcp_connection(
                 if size == 0 {
                     error!("client {} disconnected unexpectedly!", user_id);
                     handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
-                    let res = stream.shutdown(Shutdown::Both);
-                    match res {
-                        Ok(_) => {}
-                        Err(e) => {
-                            error!("Stream had to be force shutdowned: {}", e);
-                        }
-                    }
+                    shutdown_stream(&stream);
                     break;
                 }
                 let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
@@ -85,8 +90,10 @@ fn handle_each_client_tcp_connection(
                 stream.flush().unwrap();
                 info!("TCP response sent: {:?}", &response_from_manager.1);
             }
-            Err(_) => {
+            Err(e) => {
                 error!("stream object is gone, client most likely disconnected");
+                println!("error: {}", e);
+                shutdown_stream(&stream);
             }
         }
     }

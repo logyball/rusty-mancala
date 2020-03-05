@@ -1,5 +1,6 @@
 use crate::game_objects::*;
 use crate::proto::*;
+use crate::constants::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -53,7 +54,7 @@ fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id
         headers: Headers::Response,
         command: Commands::Reply,
         game_status: GameStatus::NotInGame,
-        data: format!("{}^{}", nickname, client_id),
+        data: format!("{}{}{}", nickname, SEPARATOR, client_id),
         game_state: GameState::new_empty(),
     }
 }
@@ -219,7 +220,7 @@ fn start_new_game(
         headers: Headers::Response,
         command: Commands::MakeNewGame,
         game_status: GameStatus::InGame,
-        data: format!("New Game^{}", &game_id),
+        data: format!("New Game{}{}", SEPARATOR, &game_id),
         game_state: new_game,
     }
 }
@@ -236,7 +237,7 @@ fn test_start_new_game() {
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::MakeNewGame);
     assert_eq!(res_msg.game_status, GameStatus::InGame);
-    assert_eq!(res_msg.data, "New Game^0".to_string());
+    assert_eq!(res_msg.data, format!("New Game{}0", SEPARATOR));
     assert_eq!(
         res_msg.game_state,
         *game_list_m.lock().unwrap().get(0).unwrap()
@@ -499,9 +500,7 @@ fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
             headers: Headers::Read,
             command: Commands::Reply,
             game_status: GameStatus::InGame,
-            data: format!(
-                "Game not active! your opponent must've disconnected."
-            ),
+            data: "Game not active! your opponent must've disconnected.".to_string(),
             game_state: game.clone(),
         }
     }
