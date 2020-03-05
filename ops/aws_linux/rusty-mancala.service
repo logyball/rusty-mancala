@@ -8,6 +8,8 @@ Restart=always
 RestartSec=1
 User=ec2-user
 ExecStart=/home/ec2-user/rusty-mancala/target/debug/rusty-mancala s
+StandardOutput=syslog
+SyslogIdentifier=mancala
 
 [Install]
 WantedBy=multi-user.target

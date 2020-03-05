@@ -17,7 +17,7 @@ pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
 /// passed back to data management.
 fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     let client_msg: Msg = bincode::deserialize(&buffer[0..size]).unwrap();
-    info!("TCP data received: {:?}", client_msg);
+    debug!("TCP data received: {:?}", client_msg);
     if client_msg.status != Status::Ok {
         // TODO - some sort of error checking
     }
@@ -42,6 +42,16 @@ fn handle_client_disconnect(
     }
 }
 
+fn shutdown_stream(stream: &TcpStream) {
+    let res = stream.shutdown(Shutdown::Both);
+    match res {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Stream had to be force shutdowned: {}", e);
+        }
+    }
+}
+
 /// Per-client tcp connection handler
 /// TCP input is received from client connection and message is handled.
 /// Messages are processed by handle_client_input_msg and appropriate actions
@@ -60,13 +70,7 @@ fn handle_each_client_tcp_connection(
                 if size == 0 {
                     error!("client {} disconnected unexpectedly!", user_id);
                     handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
-                    let res = stream.shutdown(Shutdown::Both);
-                    match res {
-                        Ok(_) => {}
-                        Err(e) => {
-                            error!("Stream had to be force shutdowned: {}", e);
-                        }
-                    }
+                    shutdown_stream(&stream);
                     break;
                 }
                 let msg_to_send_to_manager: Msg = handle_client_input_msg(&buffer, size);
@@ -83,10 +87,12 @@ fn handle_each_client_tcp_connection(
                 response_from_manager.1.serialize(&mut buffer);
                 stream.write_all(&buffer).unwrap();
                 stream.flush().unwrap();
-                info!("TCP response sent: {:?}", &response_from_manager.1);
+                debug!("TCP response sent: {:?}", &response_from_manager.1);
             }
-            Err(_) => {
+            Err(e) => {
                 error!("stream object is gone, client most likely disconnected");
+                println!("error: {}", e);
+                shutdown_stream(&stream);
             }
         }
     }
@@ -169,13 +175,14 @@ fn set_up_new_client_tcp_connection(
 /// connects. Performs some initialization after connection and then loops
 /// on handling client input.
 fn tcp_connection_manager(
+    port_int: u32,
     client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: Arc<Mutex<MsgChanSender>>,
     active_nicks_mutex: Arc<Mutex<HashSet<String>>>,
     id_nick_map_mutex: Arc<Mutex<HashMap<u32, String>>>,
 ) {
-    let connection = "0.0.0.0:4567";
-    let listener = TcpListener::bind(connection).unwrap();
+    let connection = format!("0.0.0.0:{}", port_int);
+    let listener = TcpListener::bind(&connection).unwrap();
     let mut cur_id: u32 = 1;
 
     info!("Server listening on {}", connection);
@@ -220,7 +227,7 @@ fn tcp_connection_manager(
 ///    - TCP Connection Manager
 ///      Spawns a new thread per client TCP connection and manages IO with the client
 ///      communicates via channels with data manager
-pub fn run_server() {
+pub fn run_server(port_int: u32) {
     let game_list: Vec<GameState> = vec![];
     let game_list_mutex = Arc::new(Mutex::new(game_list));
 
@@ -258,6 +265,7 @@ pub fn run_server() {
         );
     });
     tcp_connection_manager(
+        port_int,
         client_comms_mutex_tcp_manager_copy,
         client_to_server_sender,
         active_nicks_mutex_tcp_copy,

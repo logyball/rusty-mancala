@@ -1,3 +1,4 @@
+use crate::constants::*;
 use crate::game_objects::*;
 use crate::proto::*;
 use std::io;

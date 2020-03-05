@@ -1,3 +1,4 @@
+use crate::constants::*;
 use crate::game_objects::*;
 use crate::proto::*;
 use std::collections::{HashMap, HashSet};
@@ -53,7 +54,7 @@ fn initial_setup(id_nick_map_mutex: &Arc<Mutex<HashMap<u32, String>>>, client_id
         headers: Headers::Response,
         command: Commands::Reply,
         game_status: GameStatus::NotInGame,
-        data: format!("{}^{}", nickname, client_id),
+        data: format!("{}{}{}", nickname, SEPARATOR, client_id),
         game_state: GameState::new_empty(),
     }
 }
@@ -63,7 +64,7 @@ fn list_available_games(game_list_mutex: &Arc<Mutex<Vec<GameState>>>) -> Msg {
     let mut active_games: Vec<&GameState> = Vec::new();
     for x in game_list_unlocked.iter() {
         // TODO - this is p inefficient, should maintain seperate data structure
-        if !x.active {
+        if !x.active && !x.game_over {
             active_games.push(x)
         };
     }
@@ -219,7 +220,7 @@ fn start_new_game(
         headers: Headers::Response,
         command: Commands::MakeNewGame,
         game_status: GameStatus::InGame,
-        data: format!("New Game^{}", &game_id),
+        data: format!("New Game{}{}", SEPARATOR, &game_id),
         game_state: new_game,
     }
 }
@@ -236,7 +237,7 @@ fn test_start_new_game() {
     assert_eq!(res_msg.headers, Headers::Response);
     assert_eq!(res_msg.command, Commands::MakeNewGame);
     assert_eq!(res_msg.game_status, GameStatus::InGame);
-    assert_eq!(res_msg.data, "New Game^0".to_string());
+    assert_eq!(res_msg.data, format!("New Game{}0", SEPARATOR));
     assert_eq!(
         res_msg.game_state,
         *game_list_m.lock().unwrap().get(0).unwrap()
@@ -275,13 +276,16 @@ fn join_game(
         };
     }
     let game: &mut GameState = &mut game_list_unlocked[game_id];
-    if game.active {
+    if game.active || game.game_over {
         return Msg {
             status: Status::Ok,
             headers: Headers::Response,
             command: Commands::JoinGame,
             game_status: GameStatus::NotInGame,
-            data: format!("Game ID {} is full, please pick a different one", &game_id),
+            data: format!(
+                "Game ID {} is unavailable, please pick a different one",
+                &game_id
+            ),
             game_state: GameState::new_empty(),
         };
     }
@@ -374,7 +378,7 @@ fn test_cant_join_active_game() {
     assert_eq!(res_msg.game_status, GameStatus::NotInGame);
     assert_eq!(
         res_msg.data,
-        "Game ID 0 is full, please pick a different one".to_string()
+        "Game ID 0 is unavailable, please pick a different one".to_string()
     );
     assert_eq!(res_msg.game_state, GameState::new_empty());
     assert!(!id_game_map_m.lock().unwrap().contains_key(&client_id));
@@ -445,12 +449,18 @@ pub fn handle_in_game(
     let game_id = id_game_map_unlocked.get(&client_id).unwrap();
     let game: &mut GameState = &mut game_list_unlocked[*game_id as usize];
     if !game.active && game.player_one != 0 && game.player_two != 0 {
+        let score_1 = game.get_player_one_score();
+        let score_2 = game.get_player_two_score();
+        game.set_game_over();
         return Msg {
             status: Status::Ok,
             headers: Headers::Write,
             command: Commands::GameIsOver,
             game_status: GameStatus::NotInGame,
-            data: "Game Over".to_string(),
+            data: format!(
+                "Game Over! Final Score:\n\tPlayer One: {}\n\tPlayer Two: {}\n",
+                score_1, score_2
+            ),
             game_state: game.clone(),
         };
     }
@@ -499,11 +509,9 @@ fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
             headers: Headers::Read,
             command: Commands::Reply,
             game_status: GameStatus::InGame,
-            data: format!(
-                "Game not active! your opponent must've disconnected."
-            ),
+            data: "Game not active! your opponent must've disconnected.".to_string(),
             game_state: game.clone(),
-        }
+        };
     }
     let move_to_make: u32 = client_msg.data.parse().unwrap();
     game.make_move(move_to_make as usize);
@@ -542,7 +550,6 @@ fn test_non_active_game_message() {
         "Game not active! your opponent must've disconnected.".to_string()
     );
 }
-
 
 #[test]
 fn test_make_move_returns_message() {
