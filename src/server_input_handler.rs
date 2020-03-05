@@ -521,8 +521,33 @@ fn make_move(client_msg: &Msg, game: &mut GameState, client_id: u32) -> Msg {
 }
 
 #[test]
+fn test_non_active_game_message() {
+    let mut game = GameState::new(1, "asdf".to_string(), 1);
+    let cli_id: u32 = 1;
+    let cli_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::MakeMove,
+        game_status: GameStatus::InGame,
+        data: "4".to_string(),
+        game_state: game.clone(),
+    };
+    let ret_msg = make_move(&cli_msg, &mut game, cli_id);
+    assert_eq!(ret_msg.status, Status::Ok);
+    assert_eq!(ret_msg.headers, Headers::Read);
+    assert_eq!(ret_msg.command, Commands::Reply);
+    assert_eq!(ret_msg.game_status, GameStatus::InGame);
+    assert_eq!(
+        ret_msg.data,
+        "Game not active! your opponent must've disconnected.".to_string()
+    );
+}
+
+
+#[test]
 fn test_make_move_returns_message() {
     let mut game = GameState::new(1, "asdf".to_string(), 1);
+    game.active = true;
     let cli_id: u32 = 1;
     let cli_msg = Msg {
         status: Status::Ok,
