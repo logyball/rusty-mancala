@@ -33,7 +33,7 @@ is mostly an exercise to learn the Rust programming language and TCP communicati
 ##### Notes on Cargo Run
 
 To use `cargo run` as a shorthand for building the binary and running it, you may have to be clever to pass command line 
-flags to the binary and not the `cargo` build system.  For example, on windows, `cargo run ` is problematic:
+flags to the binary and not the `cargo` build system.  For example, on windows, `cargo run` is problematic:
 
 ```
 PS> cargo run -s 1234
@@ -60,7 +60,7 @@ PS> cargo run -- -s  1234
 ```
 $ cargo run
     Finished dev [unoptimized + debuginfo] target(s) in 0.48s
-     Running `target\debug\rusty-mancala.exe\`
+     Running `target\debug\rusty-mancala.exe`
 run client
 Enter a host: ec2-52-11-55-180.us-west-2.compute.amazonaws.com
 Enter a port: 4567
@@ -125,7 +125,7 @@ Current game state:
 ```
 
 Player 1 can make a move, and if it results in the turns changing, then it will be player 2's turn.  Let's say player 1 
-moves slot 5, which does not result in a turn change.
+moves slot 5, which results in a change to Player 2's turn.
 
 Now player 1 sees:
 
@@ -154,13 +154,13 @@ This proceeds until the game is finished, at which point both players are return
 
 ## Details
 
-This project is largely implemented via its [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html) Struct 
+This project is largely implemented via Rust's [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html) Struct 
 in the standard library.
 
 ## Protocol
 
 A large part of the communication between the client and the server is over a serialized messaging protocol.  The 
-protocol is loosely defined below.  See the [Protocol](./protocol.txt) documentation for more details.
+protocol is loosely defined below.  See the [Protocol](./mancala_rfc.md) documentation for more details.
 
 #### Message Object
 
@@ -314,6 +314,7 @@ New Nickname Server Error Response:
     player_two_goal_slot:   int,
     player_one_turn:        bool,
     active:                 bool,
+    game_over:              bool,
 }
 ```
 
@@ -321,6 +322,14 @@ New Nickname Server Error Response:
 
 Server is deployed on AWS.  Connect by building the client, and connecting to host 
 `ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.
+
+## Known Issues
+
+Windows doesn't like the control character used to clear the screen:
+
+![windows_stupid](./img/windows_ctl_char.jpg "")
+
+This bug doesn't seem to show up when run via `cargo run`, but when run via the compiled binary, it's there.
 
 ## Authors
 

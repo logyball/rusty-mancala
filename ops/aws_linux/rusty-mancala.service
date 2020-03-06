@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=ec2-user
-ExecStart=/home/ec2-user/rusty-mancala/target/debug/rusty-mancala s
+ExecStart=/home/ec2-user/rusty-mancala/target/release/rusty-mancala -s 4567 -ddd
 StandardOutput=syslog
 SyslogIdentifier=mancala
 
