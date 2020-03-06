@@ -322,6 +322,14 @@ New Nickname Server Error Response:
 Server is deployed on AWS.  Connect by building the client, and connecting to host 
 `ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.
 
+## Known Issues
+
+Windows doesn't like the control character used to clear the screen:
+
+![windows_stupid](./img/windows_ctl_char.jpg "")
+
+This bug doesn't seem to show up when run via `cargo run`, but when run via the compiled binary, it's there.
+
 ## Authors
 
 * **Belén Bustamante** - [rooneyshuman](https://github.com/rooneyshuman)

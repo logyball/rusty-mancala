@@ -1,3 +1,10 @@
+os:
+  - osx
+  - windows
+  - linux
+
+dist: bionic
+
 language: rust
 rust:
   - 1.41.0
