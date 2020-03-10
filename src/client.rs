@@ -7,15 +7,11 @@ use std::net::TcpStream;
 fn client_handshake(stream: &mut TcpStream) -> bool {
     let mut buffer_arr = [0; 512];
     stream
-        .write_all(&(*SUPER_SECRET_PASSWORD).as_bytes())
+        .write_all(SUPER_SECRET_PASSWORD.as_bytes())
         .expect("Server write error");
     stream.flush().unwrap();
     match stream.read(&mut buffer_arr) {
         Ok(size) => {
-            if size == 0 {
-                println!("Server terminated connection");
-                return false;
-            }
             if std::str::from_utf8(&buffer_arr[0..size])
                 .unwrap()
                 .to_ascii_lowercase()
@@ -24,11 +20,9 @@ fn client_handshake(stream: &mut TcpStream) -> bool {
                 return true;
             }
         }
-        Err(_) => {
-            println!("server did something bad");
-            return true;
-        }
+        _ => {}
     }
+    println!("server didn't like client auth");
     false
 }
 
@@ -77,12 +71,15 @@ pub fn run_client() {
         let my_id: u32;
         match TcpStream::connect(&connection) {
             Ok(mut stream) => {
-                client_handshake(&mut stream);
+                if !client_handshake(&mut stream) {
+                    println!("server didn't like client auth");
+                    break;
+                }
                 let mut cli_msg = initial_hello_msg();
                 let res_tuple = initial_setup_for_client(&mut stream, &cli_msg);
                 if !res_tuple.0 {
                     println!("Server terminated connection");
-                    return;
+                    break;
                 }
                 nickname = res_tuple.1.clone();
                 my_id = res_tuple.2;
