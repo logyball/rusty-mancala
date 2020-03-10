@@ -3,6 +3,7 @@ use crate::game_objects::*;
 use crate::proto::*;
 use crate::server_input_handler::*;
 
+use crate::constants::SUPER_SECRET_PASSWORD;
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
@@ -64,6 +65,11 @@ fn handle_each_client_tcp_connection(
 ) {
     let mut buffer = [0; 512];
     let mut in_game: bool = false;
+    if !is_client_authorized(&mut stream) {
+        handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
+        shutdown_stream(&stream);
+        return; // not authorized, boot this client
+    }
     loop {
         match stream.read(&mut buffer) {
             Ok(size) => {
@@ -144,6 +150,28 @@ fn data_manager(
         res_comm_channel
             .send((rec.0, server_res))
             .expect("Error sending to thread");
+    }
+}
+
+/// check the authorization of client
+///
+fn is_client_authorized(stream: &mut TcpStream) -> bool {
+    let mut buffer = [0; 512];
+    match stream.read(&mut buffer) {
+        Ok(size) => {
+            if &buffer[0..size] == SUPER_SECRET_PASSWORD.as_bytes() {
+                info!("Client authenticated, granting access");
+                stream.write_all(b"nice").unwrap();
+                stream.flush().unwrap();
+                return true;
+            }
+            error!("Client supplied the wrong password");
+            false
+        }
+        Err(e) => {
+            error!("User not authorized! Terminating. error: {}", e);
+            false
+        }
     }
 }
 
