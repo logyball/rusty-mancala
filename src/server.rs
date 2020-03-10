@@ -24,6 +24,8 @@ fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     client_msg
 }
 
+/// When a client terminates the connection, clear them from the shared data structures
+/// as well as booting them from a game if they're in one currently
 fn handle_client_disconnect(
     snd_channel: &Arc<Mutex<MsgChanSender>>,
     rec_channel: &MsgChanReceiver,

@@ -1,6 +1,5 @@
 use crate::client_input_handler::*;
 use crate::constants::*;
-use crate::game_objects::*;
 use crate::proto::*;
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -8,20 +7,12 @@ use std::net::TcpStream;
 /// Client initialization
 /// Gets the client's id from the server, and allows the client to enter
 /// the lobby as well as create a nickname
-#[allow(unused_assignments)]
 fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, String, u32) {
     let mut buffer_arr = [0; 512];
+    let res_msg: Msg;
     message.serialize(&mut buffer_arr);
     stream.write_all(&buffer_arr).expect("Server write error");
     stream.flush().unwrap();
-    let mut res_msg = Msg {
-        status: Status::Ok,
-        headers: Headers::Read,
-        command: Commands::KillMe,
-        game_status: GameStatus::NotInGame,
-        data: String::new(),
-        game_state: GameState::new_empty(),
-    };
     match stream.read(&mut buffer_arr) {
         Ok(size) => {
             if size == 0 {
@@ -50,13 +41,12 @@ fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, Str
 /// Main functionality is split between "in game" and "out of game" functions,
 /// where the input and validation is different between whether the client
 /// is currently playing a game or currently in the "lobby"
-#[allow(unused_assignments)]
 pub fn run_client() {
     loop {
         let connection = initial_screen();
         let mut buffer_arr = [0; 512];
-        let mut nickname: String = String::new();
-        let mut my_id: u32 = 0;
+        let mut nickname: String;
+        let my_id: u32;
         match TcpStream::connect(&connection) {
             Ok(mut stream) => {
                 let mut cli_msg = initial_hello_msg();
