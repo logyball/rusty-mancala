@@ -4,7 +4,6 @@ use crate::proto::*;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
-
 /// Function to perform "authentication"
 /// Although this isn't the most secure, by adding an expectation that
 /// the server will read the super secret password that this client
