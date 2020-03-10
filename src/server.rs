@@ -159,9 +159,7 @@ fn is_client_authorized(stream: &mut TcpStream) -> bool {
     let mut buffer = [0; 512];
     match stream.read(&mut buffer) {
         Ok(size) => {
-            if std::str::from_utf8(&buffer[0..size]).unwrap()
-                == SUPER_SECRET_PASSWORD.to_ascii_lowercase()
-            {
+            if &buffer[0..size] == SUPER_SECRET_PASSWORD.as_bytes() {
                 info!("Client authenticated, granting access");
                 stream.write_all(b"nice").unwrap();
                 stream.flush().unwrap();
@@ -233,7 +231,6 @@ fn tcp_connection_manager(
                         &active_nicks_mutex,
                         &id_nick_map_mutex,
                     );
-                info!("new connection set up");
                 let t = thread::Builder::new()
                     .name(format!("thread: {}", cur_id))
                     .spawn(move || {
