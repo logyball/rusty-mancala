@@ -94,6 +94,11 @@ fn handle_each_client_tcp_connection(
                 stream.write_all(&buffer).unwrap();
                 stream.flush().unwrap();
                 debug!("TCP response sent: {:?}", &response_from_manager.1);
+                if response_from_manager.1.command == Commands::KillClient {
+                    info!("client {} killed!", user_id);
+                    shutdown_stream(&stream);
+                    break;
+                }
             }
             Err(e) => {
                 error!("stream object is gone, client most likely disconnected");
