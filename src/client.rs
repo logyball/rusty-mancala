@@ -6,7 +6,9 @@ use std::net::TcpStream;
 
 fn client_handshake(stream: &mut TcpStream) -> bool {
     let mut buffer_arr = [0; 512];
-    stream.write_all(&(*SUPER_SECRET_PASSWORD).as_bytes()).expect("Server write error");
+    stream
+        .write_all(&(*SUPER_SECRET_PASSWORD).as_bytes())
+        .expect("Server write error");
     stream.flush().unwrap();
     match stream.read(&mut buffer_arr) {
         Ok(size) => {
@@ -14,7 +16,11 @@ fn client_handshake(stream: &mut TcpStream) -> bool {
                 println!("Server terminated connection");
                 return false;
             }
-            if std::str::from_utf8(&buffer_arr[0..size]).unwrap().to_ascii_lowercase() == "nice".to_string() {
+            if std::str::from_utf8(&buffer_arr[0..size])
+                .unwrap()
+                .to_ascii_lowercase()
+                == "nice"
+            {
                 return true;
             }
         }

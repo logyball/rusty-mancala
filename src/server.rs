@@ -3,12 +3,12 @@ use crate::game_objects::*;
 use crate::proto::*;
 use crate::server_input_handler::*;
 
+use crate::constants::SUPER_SECRET_PASSWORD;
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use crate::constants::SUPER_SECRET_PASSWORD;
 
 pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
 pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
@@ -63,14 +63,14 @@ fn handle_each_client_tcp_connection(
     mut stream: TcpStream,
     snd_channel: &Arc<Mutex<MsgChanSender>>,
     rec_channel: &MsgChanReceiver,
-    user_id: u32
+    user_id: u32,
 ) {
     let mut buffer = [0; 512];
     let mut in_game: bool = false;
     if !is_client_authorized(&mut stream) {
         handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
         shutdown_stream(&stream);
-        return   // not authorized, boot this client
+        return; // not authorized, boot this client
     }
     loop {
         match stream.read(&mut buffer) {
@@ -161,11 +161,13 @@ fn is_client_authorized(stream: &mut TcpStream) -> bool {
     let mut buffer = [0; 512];
     match stream.read(&mut buffer) {
         Ok(size) => {
-            if std::str::from_utf8(&buffer[0..size]).unwrap() == SUPER_SECRET_PASSWORD.to_ascii_lowercase() {
+            if std::str::from_utf8(&buffer[0..size]).unwrap()
+                == SUPER_SECRET_PASSWORD.to_ascii_lowercase()
+            {
                 info!("Client authenticated, granting access");
-                stream.write_all("nice".as_bytes()).unwrap();
+                stream.write_all(b"nice").unwrap();
                 stream.flush().unwrap();
-                return true
+                return true;
             }
             error!("Client supplied the wrong password");
             false
