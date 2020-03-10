@@ -8,6 +8,7 @@ use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
+use crate::constants::SUPER_SECRET_PASSWORD;
 
 pub type MsgChanSender = mpsc::Sender<(u32, Msg)>;
 pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
@@ -62,10 +63,15 @@ fn handle_each_client_tcp_connection(
     mut stream: TcpStream,
     snd_channel: &Arc<Mutex<MsgChanSender>>,
     rec_channel: &MsgChanReceiver,
-    user_id: u32,
+    user_id: u32
 ) {
     let mut buffer = [0; 512];
     let mut in_game: bool = false;
+    if !is_client_authorized(&mut stream) {
+        handle_client_disconnect(&snd_channel, rec_channel, user_id, in_game);
+        shutdown_stream(&stream);
+        return   // not authorized, boot this client
+    }
     loop {
         match stream.read(&mut buffer) {
             Ok(size) => {
@@ -149,6 +155,28 @@ fn data_manager(
     }
 }
 
+/// check the authorization of client
+///
+fn is_client_authorized(stream: &mut TcpStream) -> bool {
+    let mut buffer = [0; 512];
+    match stream.read(&mut buffer) {
+        Ok(size) => {
+            if std::str::from_utf8(&buffer[0..size]).unwrap() == SUPER_SECRET_PASSWORD.to_ascii_lowercase() {
+                info!("Client authenticated, granting access");
+                stream.write_all("nice".as_bytes()).unwrap();
+                stream.flush().unwrap();
+                return true
+            }
+            error!("Client supplied the wrong password");
+            false
+        }
+        Err(e) => {
+            error!("User not authorized! Terminating. error: {}", e);
+            false
+        }
+    }
+}
+
 /// Set up new client
 /// Gives initial values to client as well as opening a new communication
 /// channel to the data manager.
@@ -205,6 +233,7 @@ fn tcp_connection_manager(
                         &active_nicks_mutex,
                         &id_nick_map_mutex,
                     );
+                info!("new connection set up");
                 let t = thread::Builder::new()
                     .name(format!("thread: {}", cur_id))
                     .spawn(move || {
