@@ -215,6 +215,15 @@ fn test_game_state_init_values_are_correct() {
 }
 
 #[test]
+fn test_game_becomes_active_after_adding_both_players() {
+    let mut gs: GameState = GameState::new_empty();
+    gs.add_new_player(1);
+    assert!(!gs.active);
+    gs.add_new_player(2);
+    assert!(gs.active);
+}
+
+#[test]
 fn test_game_becomes_active_after_adding_player_two() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     assert!(!gs.active);
