@@ -325,7 +325,7 @@ Server is deployed on AWS. Connect by building the client, and connecting to hos
 
 To measure our test code coverage, we utilized the [`cargo-tarpaulin`](https://crates.io/crates/cargo-tarpaulin) crate. Tarpaulin is a code coverage reporting tool for the Cargo build system. It was added to our Continuous Integration workflow by having our Travis-CI setup send the coverage results to [Coveralls.io](https://coveralls.io/github/loganballard/rusty-mancala) for reporting and visualization.
 
-Below is a sample report generated for one of our builds:
+Below is a sample Coveralls report generated for one of our builds:
 
 ![coveralls_report](./img/coveralls_report.png)
 
