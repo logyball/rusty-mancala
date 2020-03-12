@@ -17,6 +17,7 @@ pub fn initial_screen() -> String {
     host.trim().to_string() + &":".to_string() + &port_int.to_string()
 }
 
+/// Collect the "host" field of the connection string from client
 fn get_host_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -34,6 +35,7 @@ fn get_host_input() -> String {
     host
 }
 
+/// Collect the "port" field of the connection string from client
 fn get_port_input() -> u32 {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -126,6 +128,7 @@ pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
 }
 
 // --------------- read functions --------------- //
+
 fn list_available_games() -> Msg {
     print!("{}[2J", 27 as char);
     Msg {
@@ -204,6 +207,7 @@ fn set_nickname() -> Msg {
     }
 }
 
+/// Creates a message to ask the server to start a new game as well as add the client to the game
 pub fn start_new_game() -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -235,7 +239,7 @@ pub fn client_initiate_disconnect() -> Msg {
 
 // --------------- in game --------------- //
 
-/// Main functionality to handle client IO while in game.  Collections
+/// Main functionality to handle client IO while in game.  Collects
 /// moves while client's turn is active.
 pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     if server_msg.status != Status::Ok {
@@ -273,7 +277,6 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     }
 }
 
-// Response to Client
 fn get_current_gamestate() -> Msg {
     Msg {
         status: Status::Ok,
@@ -291,6 +294,8 @@ fn wait_for_my_turn() -> Msg {
     get_current_gamestate()
 }
 
+/// Helper function to decide if the current game state allows the requested move, otherwise
+/// return an error
 fn check_is_move_valid(move_to_make: usize, game_state: &GameState, am_i_player_one: bool) -> bool {
     let range_of_valid_moves = if am_i_player_one {
         Range {
@@ -318,6 +323,8 @@ fn check_is_move_valid(move_to_make: usize, game_state: &GameState, am_i_player_
     false
 }
 
+/// Loop to collect the slot to move from the player, validate it for a "legal" move,
+/// then send off to the server for processing
 fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();

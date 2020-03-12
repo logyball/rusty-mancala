@@ -1,39 +1,45 @@
+[![Build Status](https://travis-ci.org/loganballard/rusty-mancala.svg?branch=master)](https://travis-ci.org/loganballard/rusty-mancala)
+[![Coverage Status](https://coveralls.io/repos/github/loganballard/rusty-mancala/badge.svg)](https://coveralls.io/github/loganballard/rusty-mancala)
+
 # Rusty Mancala
-![rusty mancala](./img/rust-mancala.jpg "")
+
+![rusty mancala](./img/rust-mancala.jpg)
 
 ### Overview
 
-Rusty Mancala is a basic implementation of the standard rules of [Mancala](https://en.wikipedia.org/wiki/Mancala).  It 
+Rusty Mancala is a basic implementation of the standard rules of [Mancala](https://en.wikipedia.org/wiki/Mancala). It
 is mostly an exercise to learn the Rust programming language and TCP communication protocols.
 
 ## How to Use
 
 0. Make sure you have the `rustup` [toolchain installed](https://rustup.rs/)
 1. Clone this repo
-2. Build the binary
-    - `$ cargo build --release`
-3. Alternatively, there may be a usable binary on this repo already if we've been extra diligent.  You can just download that.
+1. Build the binary
+   - `$ cargo build --release`
+1. Alternatively, there may be a usable binary on this repo already if we've been extra diligent. You can just download that.
 
 ##### To Run Locally
-1. In a terminal, run the binary in server mode.  This will spin up a local server instance
-    - `$ ./release/rusty-mancala{.exe} -s [PORT NUMBER]`
-    - To run with logging enabled, add `-d{dd}` flags.  More `d`s is more verbose.
-2. In a separate terminal, run the client.  The default (no command line flags) command line will run the client.
-    - `$ ./release/rusty-mancala{.exe}`
+
+1. In a terminal, run the binary in server mode. This will spin up a local server instance
+   - `$ ./release/rusty-mancala{.exe} -s [PORT NUMBER]`
+   - To run with logging enabled, add `-d{dd}` flags. More `d`s is more verbose.
+2. In a separate terminal, run the client. The default (no command line flags) command line will run the client.
+   - `$ ./release/rusty-mancala{.exe}`
 3. Enter localhost and the port number you specified earlier
 4. Repeat step 2-3 with more terminal windows
 
-##### To Run Against our Cloud Deployment 
+##### To Run Against our Cloud Deployment
+
 1. In a terminal, run the client
-    - `$ ./release/rusty-mancala{.exe}`
-3. Enter host: `ec2-52-11-55-180.us-west-2.compute.amazonaws.com` 
-4. Enter port: `4567`
-5. Look for a game, change your nickname, or start your own game!
+   - `$ ./release/rusty-mancala{.exe}`
+2. Enter host: `ec2-52-11-55-180.us-west-2.compute.amazonaws.com`
+3. Enter port: `4567`
+4. Look for a game, change your nickname, or start your own game!
 
 ##### Notes on Cargo Run
 
-To use `cargo run` as a shorthand for building the binary and running it, you may have to be clever to pass command line 
-flags to the binary and not the `cargo` build system.  For example, on windows, `cargo run` is problematic:
+To use `cargo run` as a shorthand for building the binary and running it, you may have to be clever to pass command line
+flags to the binary and not the `cargo` build system. For example, on windows, `cargo run` is problematic:
 
 ```
 PS> cargo run -s 1234
@@ -47,9 +53,9 @@ USAGE:
 For more information try --help
 ```
 
-but running with `cargo run -- -s 1234` works.  [See this thread.](https://stackoverflow.com/questions/15780174/powershell-command-line-parameters-and)
+but running with `cargo run -- -s 1234` works. [See this thread.](https://stackoverflow.com/questions/15780174/powershell-command-line-parameters-and)
 
-``` 
+```
 PS> cargo run -- -s  1234
     Finished dev [unoptimized + debuginfo] target(s) in 0.07s
      Running `target\debug\rusty-mancala.exe -s 1234`
@@ -57,6 +63,7 @@ PS> cargo run -- -s  1234
 ```
 
 ##### Example usage:
+
 ```
 $ cargo run
     Finished dev [unoptimized + debuginfo] target(s) in 0.48s
@@ -90,7 +97,8 @@ user_5
 ```
 
 ##### Rules of Mancala
-If you are unfamiliar with the rules of Mancala, please see 
+
+If you are unfamiliar with the rules of Mancala, please see
 [this lovely instructables article](https://www.instructables.com/id/How-to-play-MANCALA/).
 
 ### Playing Rusty Mancala
@@ -111,7 +119,7 @@ Current game state:
 Player 1, enter your move (1 - 6)
 ```
 
-Player 1 then selects a slot to move their stones around the board from.  Meanwhile, player two is awaiting their turn 
+Player 1 then selects a slot to move their stones around the board from. Meanwhile, player two is awaiting their turn
 patiently:
 
 ```
@@ -124,7 +132,7 @@ Current game state:
         Waiting for my turn...
 ```
 
-Player 1 can make a move, and if it results in the turns changing, then it will be player 2's turn.  Let's say player 1 
+Player 1 can make a move, and if it results in the turns changing, then it will be player 2's turn. Let's say player 1
 moves slot 5, which results in a change to Player 2's turn.
 
 Now player 1 sees:
@@ -154,13 +162,13 @@ This proceeds until the game is finished, at which point both players are return
 
 ## Details
 
-This project is largely implemented via Rust's [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html) Struct 
+This project is largely implemented via Rust's [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html) Struct
 in the standard library.
 
 ## Protocol
 
-A large part of the communication between the client and the server is over a serialized messaging protocol.  The 
-protocol is loosely defined below.  See the [Protocol](./mancala_rfc.md) documentation for more details.
+A large part of the communication between the client and the server is over a serialized messaging protocol. The
+protocol is loosely defined below. See the [Protocol](./mancala_rfc.md) documentation for more details.
 
 #### Message Object
 
@@ -176,18 +184,10 @@ protocol is loosely defined below.  See the [Protocol](./mancala_rfc.md) documen
 ```
 
 The message object is the serialized struct that is sent in between the client and the server and drives all action. It
-is used both in the game and outside of the game.  The general workflow is :
-    
-    - Client collects input from the user
-    - User input is translated into a `Message` struct 
-    - Client serializes message and sends to the server
-    - Server ingests message, deserializes into a `Message` struct
-    - Server takes appropriate action based on message
-    - Server generates message to send to client, serializes it
-    - Server sends message to client
-    - Client ingests server response and prompts user for input
-    - Repeat
-    
+is used both in the game and outside of the game. The general workflow is :
+
+- Client collects input from the user - User input is translated into a `Message` struct - Client serializes message and sends to the server - Server ingests message, deserializes into a `Message` struct - Server takes appropriate action based on message - Server generates message to send to client, serializes it - Server sends message to client - Client ingests server response and prompts user for input - Repeat
+
 The fields of the message are described below.
 
 ##### Status
@@ -199,7 +199,7 @@ The fields of the message are described below.
 }
 ```
 
-Status is an `enum` containing two values: `Ok` and `NotOk`.  These are used to communicate errors or successful 
+Status is an `enum` containing two values: `Ok` and `NotOk`. These are used to communicate errors or successful
 actions for server or client.
 
 ##### Headers
@@ -212,8 +212,8 @@ actions for server or client.
 }
 ```
 
-Various headers to indicate how a client or server should handle this message.  `Read` messages do not require any updates
-to data, so will be handled in a way that doesn't obtain locks or mess with writing.  Write data is handled more carefully.
+Various headers to indicate how a client or server should handle this message. `Read` messages do not require any updates
+to data, so will be handled in a way that doesn't obtain locks or mess with writing. Write data is handled more carefully.
 Response data is information given from server to client.
 
 ##### Commands
@@ -236,26 +236,26 @@ Response data is information given from server to client.
 }
 ```
 
-The commands are used to drive action by the server or the client.  In general, the client will ask the server to do 
+The commands are used to drive action by the server or the client. In general, the client will ask the server to do
 something, and the server will reply with a status that tells the client whether or not that action was successful.
 
 C = Client
 S = Server
 
-| Command              | Direction | Description | payload |
-|:----------------------:|:-----------:|:-----------|:---------|
-| SetNick             | C -> S  | Client requests a change to their nickname | the new nickname |
-| ListGames           | C -> S  | Request to return a list of open games | none |
-| ListUsers           | C -> S  | Request to return a list of active users | none |
-| MakeNewGame         | C -> S  | Create a new game and add me to it | text input game name |
-| JoinGame            | C -> S  | Request to join an available game | the id of the game |
-| LeaveGame           | C -> S  | Request to leave a game once joined | none |
-| GetCurrentGamestate | C -> S  | Return the current board state | none |
-| MakeMove            | C -> S  | While in game, move stones from a slot | The slot to move stones from |
-| GameIsOver          | S -> C  | Response when game state has reached "finished" | none |
-| KillMe              | C -> S  | Request to remove client from active lists | none |
-| KillClient          | S -> C  | Response to end client TCP connection | none |
-| Reply               | S -> C  | Generic reply format | varies |
+|       Command       | Direction | Description                                     | payload                      |
+| :-----------------: | :-------: | :---------------------------------------------- | :--------------------------- |
+|       SetNick       |  C -> S   | Client requests a change to their nickname      | the new nickname             |
+|      ListGames      |  C -> S   | Request to return a list of open games          | none                         |
+|      ListUsers      |  C -> S   | Request to return a list of active users        | none                         |
+|     MakeNewGame     |  C -> S   | Create a new game and add me to it              | text input game name         |
+|      JoinGame       |  C -> S   | Request to join an available game               | the id of the game           |
+|      LeaveGame      |  C -> S   | Request to leave a game once joined             | none                         |
+| GetCurrentGamestate |  C -> S   | Return the current board state                  | none                         |
+|      MakeMove       |  C -> S   | While in game, move stones from a slot          | The slot to move stones from |
+|     GameIsOver      |  S -> C   | Response when game state has reached "finished" | none                         |
+|       KillMe        |  C -> S   | Request to remove client from active lists      | none                         |
+|     KillClient      |  S -> C   | Response to end client TCP connection           | none                         |
+|        Reply        |  S -> C   | Generic reply format                            | varies                       |
 
 ##### Game Status
 
@@ -266,12 +266,12 @@ S = Server
 }
 ```
 
-Game status drives certain code paths.  For the client, it determines which screens to render.  For the server, it 
+Game status drives certain code paths. For the client, it determines which screens to render. For the server, it
 determines how to route client messages.
 
 ##### Data
 
-Data is a text field that contains metadata about the message sent.  It can be things like the nickname that the user has
+Data is a text field that contains metadata about the message sent. It can be things like the nickname that the user has
 chosen, or an error message that is returned to the client when the server chokes on something.
 
 ###### Examples:
@@ -290,6 +290,7 @@ New Nickname "nick" Server Success Response:
 ```
 
 New Nickname Server Error Response:
+
 ```
 {
     status:         NotOk,
@@ -320,21 +321,29 @@ New Nickname Server Error Response:
 
 ### Deployment
 
-Server is deployed on AWS.  Connect by building the client, and connecting to host 
+Server is deployed on AWS. Connect by building the client, and connecting to host
 `ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.
+
+## Testing
+
+To measure our test code coverage, we utilized the [`cargo-tarpaulin`](https://crates.io/crates/cargo-tarpaulin) crate. Tarpaulin is a code coverage reporting tool for the Cargo build system. It was added to our Continuous Integration workflow by having our Travis-CI setup send the coverage results to [Coveralls.io](https://coveralls.io/github/loganballard/rusty-mancala) for reporting and visualization.
+
+Below is a sample Coveralls report generated for one of our builds:
+
+![coveralls_report](./img/coveralls_report.png)
 
 ## Known Issues
 
 Windows doesn't like the control character used to clear the screen:
 
-![windows_stupid](./img/windows_ctl_char.jpg "")
+![windows_stupid](./img/windows_ctl_char.jpg)
 
 This bug doesn't seem to show up when run via `cargo run`, but when run via the compiled binary, it's there.
 
 ## Authors
 
-* **Belén Bustamante** - [rooneyshuman](https://github.com/rooneyshuman)
-* **Logan Ballard** - [loganballard](https://github.com/loganballard)
+- **Belén Bustamante** - [rooneyshuman](https://github.com/rooneyshuman)
+- **Logan Ballard** - [loganballard](https://github.com/loganballard)
 
 ## License
 
