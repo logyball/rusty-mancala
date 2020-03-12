@@ -287,7 +287,7 @@ fn test_scoring_turns_dont_change_players() {
 }
 
 #[test]
-fn test_captures() {
+fn test_player_one_captures() {
     // this test assumes SLOTS = 7 and starting_stones = 4
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     gs.add_new_player(1);
@@ -301,6 +301,23 @@ fn test_captures() {
     assert_eq!(gs.game_board[gs.player_two_goal_slot], 1);
     assert_eq!(gs.game_board[8], 0);
     assert_eq!(gs.game_board[6], 0);
+}
+
+#[test]
+fn test_player_two_captures() {
+    // this test assumes SLOTS = 7 and starting_stones = 4
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.add_new_player(2);
+    gs.make_move(4);
+    gs.make_move(13);
+    gs.make_move(2);
+    gs.make_move(4);
+    gs.make_move(9);
+    assert!(!gs.player_one_turn);
+    assert_eq!(gs.game_board[gs.player_one_goal_slot], 2);
+    assert_eq!(gs.game_board[gs.player_two_goal_slot], 7);
+    assert_eq!(gs.game_board[1], 0);
+    assert_eq!(gs.game_board[13], 0);
 }
 
 #[test]
