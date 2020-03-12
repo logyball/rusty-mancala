@@ -224,6 +224,23 @@ fn test_game_becomes_active_after_adding_both_players() {
 }
 
 #[test]
+fn test_game_properly_removes_player_one() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    assert_eq!(gs.player_one, 1);
+    gs.remove_player(1);
+    assert_eq!(gs.player_one, 0);
+}
+
+#[test]
+fn test_game_properly_removes_player_two() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.add_new_player(2);
+    assert_eq!(gs.player_two, 2);
+    gs.remove_player(2);
+    assert_eq!(gs.player_two, 0);
+}
+
+#[test]
 fn test_game_becomes_active_after_adding_player_two() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     assert!(!gs.active);
