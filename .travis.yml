@@ -11,7 +11,7 @@ rust:
   - 1.41.0
 
 before_cache: |
-  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+  if [[ "$TRAVIS_RUST_VERSION" == stable ]] && [[ "$TRAVIS_OS_NAME" = "linux" ]]; then
     cargo install cargo-tarpaulin
   fi
 
@@ -26,6 +26,6 @@ script:
   - cargo test --verbose
 
 after_success: |
-  if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
+  if [[ "$TRAVIS_RUST_VERSION" == stable ]] && [[ "$TRAVIS_OS_NAME" = "linux" ]]; then
     cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
   fi
