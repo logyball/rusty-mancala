@@ -11,17 +11,14 @@ fn client_handshake(stream: &mut TcpStream) -> bool {
         .write_all(SUPER_SECRET_PASSWORD.as_bytes())
         .expect("Server write error");
     stream.flush().unwrap();
-    match stream.read(&mut buffer_arr) {
-        Ok(size) => {
-            if std::str::from_utf8(&buffer_arr[0..size])
-                .unwrap()
-                .to_ascii_lowercase()
-                == "nice"
-            {
-                return true;
-            }
+    if let Ok(size) = stream.read(&mut buffer_arr) {
+        if std::str::from_utf8(&buffer_arr[0..size])
+            .unwrap()
+            .to_ascii_lowercase()
+            == "nice"
+        {
+            return true;
         }
-        _ => {}
     }
     println!("server didn't like client auth");
     false
