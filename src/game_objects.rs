@@ -343,3 +343,29 @@ fn test_game_over() {
     gs.make_move(10);
     assert!(gs.game_over);
 }
+
+#[test]
+fn test_set_game_over() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    assert!(!gs.game_over);
+    gs.set_game_over();
+    assert!(gs.game_over);
+}
+
+#[test]
+fn test_get_board() {
+    let gs: GameState = GameState::new(1, "name".to_string(), 0);
+    let gs_board = gs.get_board();
+    let init_board = [0, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4];
+    assert_eq!(gs_board, init_board);
+}
+
+#[test]
+fn test_get_scores() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.game_board = [24, 0, 0, 0, 0, 0, 0, 20, 0, 0, 4, 0, 0, 0];
+    let player_one_score = gs.get_player_one_score();
+    let player_two_score = gs.get_player_two_score();
+    assert_eq!(player_one_score, 20);
+    assert_eq!(player_two_score, 24);
+}
