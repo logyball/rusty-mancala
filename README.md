@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/loganballard/rusty-mancala.svg?branch=master)](https://travis-ci.org/loganballard/rusty-mancala)
-[![Coverage Status](https://coveralls.io/repos/github/loganballard/rusty-mancala/badge.svg)](https://coveralls.io/github/loganballard/rusty-mancala)
+[![Coverage Status](https://coveralls.io/repos/github/loganballard/rusty-mancala/badge.svg?branch=master&service=github)]
 
 # Rusty Mancala
 
