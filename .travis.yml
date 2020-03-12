@@ -21,7 +21,7 @@ before_script:
 
 script:
   - cargo clean
-  - cargo clippy
+  - cargo clippy -- -D warnings
   - cargo build
   - cargo test --verbose
 
