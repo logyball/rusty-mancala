@@ -334,3 +334,12 @@ fn test_collect_remaining() {
     assert_eq!(gs2.game_board[gs2.player_one_goal_slot], 21);
     assert_eq!(gs2.game_board[gs2.player_two_goal_slot], 27);
 }
+
+#[test]
+fn test_game_over() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.game_board = [24, 0, 0, 0, 0, 0, 0, 20, 0, 0, 4, 0, 0, 0];
+    assert!(!gs.game_over);
+    gs.make_move(10);
+    assert!(gs.game_over);
+}
