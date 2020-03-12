@@ -166,7 +166,6 @@ impl GameState {
             cur_slot = (cur_slot + 1) % BOARD_LENGTH;
         }
         // only change turns if current player didn't score
-        // TODO - decide if we should change turns on capture
         if cur_slot != goal_slots.0 && !self.capture(cur_slot) {
             self.player_one_turn = !self.player_one_turn;
         }
