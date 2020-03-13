@@ -26,13 +26,34 @@ fn get_host_input() -> String {
         print!("Enter a host: ");
         stdout.flush().expect("Error flushing buffer");
         stdin.read_line(&mut host).expect("Error reading in");
-        if host.trim().is_empty() {
+        if !verify_host(host.trim().to_string()) {
             println!("Cannot have an empty host!");
+            host = String::new();
             continue;
         }
         break;
     }
     host
+}
+
+fn verify_host(hostname: String) -> bool {
+    !hostname.contains(" ") && !hostname.is_empty()
+}
+
+#[test]
+fn test_verify_invalid_host() {
+    let mut invalid_host = String::from("");
+    assert!(!verify_host(invalid_host));
+    invalid_host = String::from("with space");
+    assert!(!verify_host(invalid_host));
+}
+
+#[test]
+fn test_verify_valid_host() {
+    let mut valid_host = String::from("localhost");
+    assert!(verify_host(valid_host));
+    valid_host = String::from("0.0.0.0");
+    assert!(verify_host(valid_host));
 }
 
 /// Collect the "port" field of the connection string from client
