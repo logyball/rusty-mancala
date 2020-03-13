@@ -215,6 +215,32 @@ fn test_game_state_init_values_are_correct() {
 }
 
 #[test]
+fn test_game_becomes_active_after_adding_both_players() {
+    let mut gs: GameState = GameState::new_empty();
+    gs.add_new_player(1);
+    assert!(!gs.active);
+    gs.add_new_player(2);
+    assert!(gs.active);
+}
+
+#[test]
+fn test_game_properly_removes_player_one() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    assert_eq!(gs.player_one, 1);
+    gs.remove_player(1);
+    assert_eq!(gs.player_one, 0);
+}
+
+#[test]
+fn test_game_properly_removes_player_two() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.add_new_player(2);
+    assert_eq!(gs.player_two, 2);
+    gs.remove_player(2);
+    assert_eq!(gs.player_two, 0);
+}
+
+#[test]
 fn test_game_becomes_active_after_adding_player_two() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     assert!(!gs.active);
@@ -261,7 +287,7 @@ fn test_scoring_turns_dont_change_players() {
 }
 
 #[test]
-fn test_captures() {
+fn test_player_one_captures() {
     // this test assumes SLOTS = 7 and starting_stones = 4
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     gs.add_new_player(1);
@@ -278,6 +304,23 @@ fn test_captures() {
 }
 
 #[test]
+fn test_player_two_captures() {
+    // this test assumes SLOTS = 7 and starting_stones = 4
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.add_new_player(2);
+    gs.make_move(4);
+    gs.make_move(13);
+    gs.make_move(2);
+    gs.make_move(4);
+    gs.make_move(9);
+    assert!(!gs.player_one_turn);
+    assert_eq!(gs.game_board[gs.player_one_goal_slot], 2);
+    assert_eq!(gs.game_board[gs.player_two_goal_slot], 7);
+    assert_eq!(gs.game_board[1], 0);
+    assert_eq!(gs.game_board[13], 0);
+}
+
+#[test]
 fn test_collect_remaining() {
     let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
     gs.add_new_player(1);
@@ -290,4 +333,39 @@ fn test_collect_remaining() {
     assert_eq!(gs.game_board[gs.player_two_goal_slot], 24);
     assert_eq!(gs2.game_board[gs2.player_one_goal_slot], 21);
     assert_eq!(gs2.game_board[gs2.player_two_goal_slot], 27);
+}
+
+#[test]
+fn test_game_over() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.game_board = [24, 0, 0, 0, 0, 0, 0, 20, 0, 0, 4, 0, 0, 0];
+    assert!(!gs.game_over);
+    gs.make_move(10);
+    assert!(gs.game_over);
+}
+
+#[test]
+fn test_set_game_over() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    assert!(!gs.game_over);
+    gs.set_game_over();
+    assert!(gs.game_over);
+}
+
+#[test]
+fn test_get_board() {
+    let gs: GameState = GameState::new(1, "name".to_string(), 0);
+    let gs_board = gs.get_board();
+    let init_board = [0, 4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4];
+    assert_eq!(gs_board, init_board);
+}
+
+#[test]
+fn test_get_scores() {
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.game_board = [24, 0, 0, 0, 0, 0, 0, 20, 0, 0, 4, 0, 0, 0];
+    let player_one_score = gs.get_player_one_score();
+    let player_two_score = gs.get_player_two_score();
+    assert_eq!(player_one_score, 20);
+    assert_eq!(player_two_score, 24);
 }
