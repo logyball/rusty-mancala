@@ -15,6 +15,7 @@ mod proto;
 mod server;
 mod server_input_handler;
 
+#[cfg_attr(tarpaulin, skip)]
 fn main() {
     let mut server: bool = false;
     let mut port_int: u32 = 4567;
