@@ -27,7 +27,7 @@ fn get_host_input() -> String {
         stdout.flush().expect("Error flushing buffer");
         stdin.read_line(&mut host).expect("Error reading in");
         if !verify_host(host.trim().to_string()) {
-            println!("Cannot have an empty host!");
+            println!("Invalid host entered!");
             host = String::new();
             continue;
         }
@@ -60,24 +60,42 @@ fn test_verify_valid_host() {
 fn get_port_input() -> u32 {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let port_int: u32;
+    let mut port = String::new();
     loop {
-        let mut port = String::new();
         print!("Enter a port: ");
         stdout.flush().expect("Error flushing buffer");
         stdin.read_line(&mut port).expect("Error reading in");
-        match port.trim().parse() {
-            Ok(x) => {
-                port_int = x;
-                break;
-            }
-            Err(e) => {
-                println!("could not make port into an int: {}!", e);
-                continue;
-            }
+
+        if !verify_port(&port) {
+            println!("Invalid port entered!");
+            port = String::new();
+            continue;
+        }
+        break;
+    }
+    port.trim().parse::<u32>().unwrap()
+}
+
+fn verify_port(port: &String) -> bool {
+    match port.trim().parse::<u32>() {
+        Ok(_) => true,
+        Err(e) => {
+            println!("could not make port into an int: {}!", e);
+            false
         }
     }
-    port_int
+}
+
+#[test]
+fn test_verify_invalid_port() {
+    let invalid_port = String::from("12k");
+    assert!(!verify_port(&invalid_port));
+}
+
+#[test]
+fn test_verify_valid_port() {
+    let valid_port = String::from("1234");
+    assert!(verify_port(&valid_port));
 }
 
 /// Returns the first message necessary for the client
@@ -92,7 +110,20 @@ pub fn initial_hello_msg() -> Msg {
     }
 }
 
-///
+#[test]
+fn test_initial_hello_msg() {
+    let valid_hello_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::InitSetup,
+        game_status: GameStatus::NotInGame,
+        data: String::new(),
+        game_state: GameState::new_empty(),
+    };
+    assert_eq!(initial_hello_msg(), valid_hello_msg);
+}
+
+/// Handle when a user is out of a game
 pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
     loop {
         let stdin = io::stdin();
