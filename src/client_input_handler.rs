@@ -37,7 +37,7 @@ fn get_host_input() -> String {
 }
 
 fn verify_host(hostname: String) -> bool {
-    !hostname.contains(" ") && !hostname.is_empty()
+    !hostname.contains(' ') && !hostname.is_empty()
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn get_port_input() -> u32 {
     port.trim().parse::<u32>().unwrap()
 }
 
-fn verify_port(port: &String) -> bool {
+fn verify_port(port: &str) -> bool {
     match port.trim().parse::<u32>() {
         Ok(_) => true,
         Err(e) => {
