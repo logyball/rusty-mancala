@@ -536,9 +536,20 @@ fn test_get_current_gamestate() {
 }
 
 fn wait_for_my_turn() -> Msg {
-    let two_sec = time::Duration::from_secs(4);
+    let two_sec = time::Duration::from_secs(2);
     thread::sleep(two_sec);
     get_current_gamestate()
+}
+
+#[test]
+fn test_wait_for_my_turn() {
+    let wait_msg = wait_for_my_turn();
+    assert_eq!(wait_msg.status, Status::Ok);
+    assert_eq!(wait_msg.headers, Headers::Read);
+    assert_eq!(wait_msg.command, Commands::GetCurrentGamestate);
+    assert_eq!(wait_msg.game_status, GameStatus::InGame);
+    assert_eq!(wait_msg.data, String::new());
+    assert_eq!(wait_msg.game_state, GameState::new_empty());
 }
 
 /// Helper function to decide if the current game state allows the requested move, otherwise
