@@ -187,7 +187,7 @@ fn test_verify_valid_selection() {
 
 pub fn handle_out_of_game(selection: u8) -> Msg {
     match selection {
-        1 => set_nickname(),
+        1 => set_nickname(get_nickname_input()),
         2 => list_available_games(),
         3 => list_active_users(),
         4 => start_new_game(),
@@ -343,8 +343,7 @@ fn test_join_game() {
     assert_eq!(join_game_msg.game_state, GameState::new_empty());
 }
 
-/// Creates a message to ask the server to change the clients current nickname
-fn set_nickname() -> Msg {
+fn get_nickname_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut nickname = String::new();
@@ -352,6 +351,11 @@ fn set_nickname() -> Msg {
     print!("Enter new nickname: ");
     stdout.flush().expect("Client input something nonsensical");
     stdin.read_line(&mut nickname).expect("I/O error");
+    nickname
+}
+
+/// Creates a message to ask the server to change the clients current nickname
+fn set_nickname(nickname: String) -> Msg {
     print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
@@ -361,6 +365,18 @@ fn set_nickname() -> Msg {
         data: nickname.trim().to_string(),
         game_state: GameState::new_empty(),
     }
+}
+
+#[test]
+fn test_set_nickname() {
+    let nickname: String = String::from("rooney");
+    let set_nickname_msg = set_nickname(nickname);
+    assert_eq!(set_nickname_msg.status, Status::Ok);
+    assert_eq!(set_nickname_msg.headers, Headers::Write);
+    assert_eq!(set_nickname_msg.command, Commands::SetNick);
+    assert_eq!(set_nickname_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(set_nickname_msg.data, String::from("rooney"));
+    assert_eq!(set_nickname_msg.game_state, GameState::new_empty());
 }
 
 /// Creates a message to ask the server to start a new game as well as add the client to the game
