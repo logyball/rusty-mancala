@@ -498,6 +498,21 @@ fn test_handle_in_game_status_not_ok() {
     assert_eq!(handler_msg.game_state, GameState::new_empty());
 }
 
+#[test]
+fn test_handle_in_game_with_game_over() {
+    let server_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::GameIsOver,
+        game_status: GameStatus::InGame,
+        data: String::new(),
+        game_state: GameState::new_empty(),
+    };
+    let my_id: u32 = 0;
+    let handler_msg = handle_in_game(&server_msg, my_id);
+    assert_eq!(handler_msg, leave_game());
+}
+
 fn get_current_gamestate() -> Msg {
     Msg {
         status: Status::Ok,
