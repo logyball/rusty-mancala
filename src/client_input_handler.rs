@@ -373,6 +373,17 @@ fn get_current_gamestate() -> Msg {
     }
 }
 
+#[test]
+fn test_get_current_gamestate() {
+    let current_gamestate = get_current_gamestate();
+    assert_eq!(current_gamestate.status, Status::Ok);
+    assert_eq!(current_gamestate.headers, Headers::Read);
+    assert_eq!(current_gamestate.command, Commands::GetCurrentGamestate);
+    assert_eq!(current_gamestate.game_status, GameStatus::InGame);
+    assert_eq!(current_gamestate.data, String::new());
+    assert_eq!(current_gamestate.game_state, GameState::new_empty());
+}
+
 fn wait_for_my_turn() -> Msg {
     let two_sec = time::Duration::from_secs(4);
     thread::sleep(two_sec);
@@ -406,6 +417,24 @@ fn check_is_move_valid(move_to_make: usize, game_state: &GameState, am_i_player_
         println!("slot you selected (slot {}) is empty!", &move_to_make);
     }
     false
+}
+
+#[test]
+fn test_invalid_move() {
+    let move_to_make: usize = 6;
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.add_new_player(2);
+    let player_one = false;
+    assert!(!check_is_move_valid(move_to_make, &gs, player_one));
+}
+
+#[test]
+fn test_valid_move() {
+    let move_to_make: usize = 6;
+    let mut gs: GameState = GameState::new(1, "name".to_string(), 0);
+    gs.add_new_player(2);
+    let player_one = true;
+    assert!(check_is_move_valid(move_to_make, &gs, player_one));
 }
 
 /// Loop to collect the slot to move from the player, validate it for a "legal" move,
