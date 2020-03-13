@@ -8,18 +8,23 @@ use std::{thread, time};
 
 // --------------- out of game --------------- //
 
-/// Initial input screen.  Calls helper functions to get valid host and port
-/// to connect to.  Returns a connection string.
-pub fn initial_screen() -> String {
-    let host: String = get_host_input();
-    let port_int: u32 = get_port_input();
+/// Generates connection string based on the user's inputs for hostname
+/// and port number. Used by the client to establish a connection to the server.
+pub fn get_connection(host: String, port: u32) -> String {
+    host.trim().to_string() + &":".to_string() + &port.to_string()
+}
 
-    host.trim().to_string() + &":".to_string() + &port_int.to_string()
+#[test]
+fn test_get_connection() {
+    let host: String = String::from("localhost");
+    let port: u32 = 1234;
+    let connection: String = String::from("localhost:1234");
+    assert_eq!(get_connection(host, port), connection);
 }
 
 /// Collect the "host" field of the connection string from client
 #[cfg_attr(tarpaulin, skip)]
-fn get_host_input() -> String {
+pub fn get_host_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut host = String::new();
@@ -59,7 +64,7 @@ fn test_verify_valid_host() {
 
 /// Collect the "port" field of the connection string from client
 #[cfg_attr(tarpaulin, skip)]
-fn get_port_input() -> u32 {
+pub fn get_port_input() -> u32 {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut port = String::new();

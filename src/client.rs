@@ -70,7 +70,7 @@ fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, Str
 #[cfg_attr(tarpaulin, skip)]
 pub fn run_client() {
     loop {
-        let connection = initial_screen();
+        let connection = get_connection(get_host_input(), get_port_input());
         let mut buffer_arr = [0; 512];
         let mut nickname: String;
         let my_id: u32;
