@@ -478,6 +478,26 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     }
 }
 
+#[test]
+fn test_handle_in_game_status_not_ok() {
+    let server_msg = Msg {
+        status: Status::NotOk,
+        headers: Headers::Write,
+        command: Commands::ListGames,
+        game_status: GameStatus::NotInGame,
+        data: String::new(),
+        game_state: GameState::new_empty(),
+    };
+    let my_id: u32 = 0;
+    let handler_msg = handle_in_game(&server_msg, my_id);
+    assert_eq!(handler_msg.status, Status::Ok);
+    assert_eq!(handler_msg.headers, Headers::Read);
+    assert_eq!(handler_msg.command, Commands::KillMe);
+    assert_eq!(handler_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(handler_msg.data, String::new());
+    assert_eq!(handler_msg.game_state, GameState::new_empty());
+}
+
 fn get_current_gamestate() -> Msg {
     Msg {
         status: Status::Ok,
