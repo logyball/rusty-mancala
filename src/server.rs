@@ -1,4 +1,3 @@
-#[cfg_attr(tarpaulin, skip)]
 use crate::client_input_handler::{client_initiate_disconnect, leave_game};
 use crate::game_objects::*;
 use crate::proto::*;
@@ -17,6 +16,7 @@ pub type MsgChanReceiver = mpsc::Receiver<(u32, Msg)>;
 /// Handle client message
 /// Messages from client are deserialized, checked for errors and
 /// passed back to data management.
+#[cfg_attr(tarpaulin, skip)]
 fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
     let client_msg: Msg = bincode::deserialize(&buffer[0..size]).unwrap();
     debug!("TCP data received: {:?}", client_msg);
@@ -28,6 +28,7 @@ fn handle_client_input_msg(buffer: &[u8; 512], size: usize) -> Msg {
 
 /// When a client terminates the connection, clear them from the shared data structures
 /// as well as booting them from a game if they're in one currently
+#[cfg_attr(tarpaulin, skip)]
 fn handle_client_disconnect(
     snd_channel: &Arc<Mutex<MsgChanSender>>,
     rec_channel: &MsgChanReceiver,
@@ -46,6 +47,7 @@ fn handle_client_disconnect(
     }
 }
 
+#[cfg_attr(tarpaulin, skip)]
 fn shutdown_stream(stream: &TcpStream) {
     let res = stream.shutdown(Shutdown::Both);
     match res {
@@ -60,6 +62,7 @@ fn shutdown_stream(stream: &TcpStream) {
 /// TCP input is received from client connection and message is handled.
 /// Messages are processed by handle_client_input_msg and appropriate actions
 /// are taken.  Responses sent to client over TCP.
+#[cfg_attr(tarpaulin, skip)]
 fn handle_each_client_tcp_connection(
     mut stream: TcpStream,
     snd_channel: &Arc<Mutex<MsgChanSender>>,
@@ -117,6 +120,7 @@ fn handle_each_client_tcp_connection(
 /// Game states are recorded as well as per-connection client information.
 /// Messages are received from the TCP connection manager and handled
 /// based on message content.  Responses are sent to TCP Connection Manager
+#[cfg_attr(tarpaulin, skip)]
 fn data_manager(
     cli_comms: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     rec_server_master: MsgChanReceiver,
@@ -158,6 +162,7 @@ fn data_manager(
 
 /// check the authorization of client
 ///
+#[cfg_attr(tarpaulin, skip)]
 fn is_client_authorized(stream: &mut TcpStream) -> bool {
     let mut buffer = [0; 512];
     match stream.read(&mut buffer) {
@@ -181,6 +186,7 @@ fn is_client_authorized(stream: &mut TcpStream) -> bool {
 /// Set up new client
 /// Gives initial values to client as well as opening a new communication
 /// channel to the data manager.
+#[cfg_attr(tarpaulin, skip)]
 fn set_up_new_client_tcp_connection(
     client_comms_mutex: &Arc<Mutex<HashMap<u32, MsgChanSender>>>,
     client_to_server_sender: &Arc<Mutex<MsgChanSender>>,
@@ -210,6 +216,7 @@ fn set_up_new_client_tcp_connection(
 /// Thread spawned from the master process.  Will handle each client that
 /// connects. Performs some initialization after connection and then loops
 /// on handling client input.
+#[cfg_attr(tarpaulin, skip)]
 fn tcp_connection_manager(
     port_int: u32,
     client_comms_mutex: Arc<Mutex<HashMap<u32, MsgChanSender>>>,
@@ -263,6 +270,7 @@ fn tcp_connection_manager(
 ///    - TCP Connection Manager
 ///      Spawns a new thread per client TCP connection and manages IO with the client
 ///      communicates via channels with data manager
+#[cfg_attr(tarpaulin, skip)]
 pub fn run_server(port_int: u32) {
     let game_list: Vec<GameState> = vec![];
     let game_list_mutex = Arc::new(Mutex::new(game_list));

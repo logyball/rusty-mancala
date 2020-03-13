@@ -1,5 +1,4 @@
 #[macro_use]
-#[cfg_attr(tarpaulin, skip)]
 extern crate log;
 extern crate simple_logger;
 use crate::client::run_client;
@@ -16,6 +15,7 @@ mod proto;
 mod server;
 mod server_input_handler;
 
+#[cfg_attr(tarpaulin, skip)]
 fn main() {
     let mut server: bool = false;
     let mut port_int: u32 = 4567;

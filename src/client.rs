@@ -1,4 +1,3 @@
-#[cfg_attr(tarpaulin, skip)]
 use crate::client_input_handler::*;
 use crate::constants::*;
 use crate::proto::*;
@@ -10,6 +9,7 @@ use std::net::TcpStream;
 /// the server will read the super secret password that this client
 /// sends, it allows the server to boot TCP connections from untrusted
 /// sources
+#[cfg_attr(tarpaulin, skip)]
 fn client_handshake(stream: &mut TcpStream) -> bool {
     let mut buffer_arr = [0; 512];
     stream
@@ -32,6 +32,7 @@ fn client_handshake(stream: &mut TcpStream) -> bool {
 /// Client initialization
 /// Gets the client's id from the server, and allows the client to enter
 /// the lobby as well as create a nickname
+#[cfg_attr(tarpaulin, skip)]
 fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, String, u32) {
     let mut buffer_arr = [0; 512];
     let res_msg: Msg;
@@ -66,6 +67,7 @@ fn initial_setup_for_client(stream: &mut TcpStream, message: &Msg) -> (bool, Str
 /// Main functionality is split between "in game" and "out of game" functions,
 /// where the input and validation is different between whether the client
 /// is currently playing a game or currently in the "lobby"
+#[cfg_attr(tarpaulin, skip)]
 pub fn run_client() {
     loop {
         let connection = initial_screen();
