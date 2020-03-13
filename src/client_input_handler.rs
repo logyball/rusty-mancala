@@ -124,59 +124,83 @@ fn test_initial_hello_msg() {
 }
 
 /// Handle when a user is out of a game
-pub fn handle_out_of_game(connection: &str, user_nick: &str) -> Msg {
-    loop {
-        let stdin = io::stdin();
-        let mut stdout = io::stdout();
-        let mut selection = String::new();
-        print!(
-            "
-    Now connected to: {0}.
-    Your current nickname is: {1}.
-    Welcome to Mancala.  Please select one of the following options:
-        (1) Change Nickname
-        (2) List Available Games
-        (3) List Active Users
-        (4) Start New Game
-        (5) Join Game
-        (6) Disconnect
+pub fn get_out_of_game_selection(connection: &str, user_nick: &str) -> u8 {
+    display_menu(connection, user_nick);
 
-    Enter your choice: ",
-            connection, user_nick
-        );
-        stdout.flush().expect("Error flushing buffer");
+    let stdin = io::stdin();
+    let mut selection = String::new();
+
+    loop {
+        display_menu(connection, user_nick);
         stdin.read_line(&mut selection).expect("Error reading in");
-        let selection_int = selection.trim().parse::<u8>();
-        match selection_int {
-            Ok(choice) => match choice {
-                1 => {
-                    println!("\n");
-                    return set_nickname();
-                }
-                2 => {
-                    return list_available_games();
-                }
-                3 => {
-                    return list_active_users();
-                }
-                4 => {
-                    return start_new_game();
-                }
-                5 => {
-                    return join_game();
-                }
-                6 => {
-                    return client_initiate_disconnect();
-                }
-                _ => {
-                    println!("invalid selection");
-                }
-            },
-            Err(e) => {
-                error!("Could not read that input! More info: {}", e);
+
+        if !verify_selection(&selection) {
+            println!("Invalid menu selection entered!");
+            selection = String::new();
+            continue;
+        }
+        break;
+    }
+    selection.trim().parse::<u8>().unwrap()
+}
+
+fn verify_selection(selection: &str) -> bool {
+    match selection.trim().parse::<u32>() {
+        Ok(choice) => {
+            if choice > 0 && choice < 7 {
+                return true;
             }
+            false
+        }
+        Err(e) => {
+            println!("could not make selection into an int: {}!", e);
+            false
         }
     }
+}
+
+pub fn handle_out_of_game(selection: u8) -> Msg {
+    match selection {
+        1 => set_nickname(),
+        2 => list_available_games(),
+        3 => list_active_users(),
+        4 => start_new_game(),
+        5 => join_game(),
+        6 => client_initiate_disconnect(),
+        _ => default_msg(),
+    }
+}
+
+fn default_msg() -> Msg {
+    print!("{}[2J", 27 as char);
+    Msg {
+        status: Status::Ok,
+        headers: Headers::Read,
+        command: Commands::InitSetup,
+        game_status: GameStatus::NotInGame,
+        data: String::new(),
+        game_state: GameState::new_empty(),
+    }
+}
+
+fn display_menu(connection: &str, user_nick: &str) {
+    let mut stdout = io::stdout();
+    print!(
+        "
+        Now connected to: {0}.
+        Your current nickname is: {1}.
+        Welcome to Mancala.  Please select one of the following options:
+            (1) Change Nickname
+            (2) List Available Games
+            (3) List Active Users
+            (4) Start New Game
+            (5) Join Game
+            (6) Disconnect
+
+        Enter your choice: ",
+        connection, user_nick
+    );
+    stdout.flush().expect("Error flushing buffer");
 }
 
 // --------------- read functions --------------- //
@@ -267,6 +291,7 @@ fn set_nickname() -> Msg {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut nickname = String::new();
+    println!("\n");
     print!("Enter new nickname: ");
     stdout.flush().expect("Client input something nonsensical");
     stdin.read_line(&mut nickname).expect("I/O error");
@@ -576,7 +601,10 @@ pub fn handle_server_response(
         *nickname = new_nick;
     }
     match server_msg.game_status {
-        GameStatus::NotInGame => handle_out_of_game(connection, &nickname),
+        GameStatus::NotInGame => {
+            let selection = get_out_of_game_selection(connection, &nickname);
+            handle_out_of_game(selection)
+        }
         _ => handle_in_game(server_msg, my_id),
     }
 }

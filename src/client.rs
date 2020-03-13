@@ -88,7 +88,8 @@ pub fn run_client() {
                 }
                 nickname = res_tuple.1.clone();
                 my_id = res_tuple.2;
-                cli_msg = handle_out_of_game(&connection, &nickname);
+                let selection: u8 = get_out_of_game_selection(&connection, &nickname);
+                cli_msg = handle_out_of_game(selection);
                 loop {
                     cli_msg.serialize(&mut buffer_arr);
                     stream.write_all(&buffer_arr).expect("Server write error");
