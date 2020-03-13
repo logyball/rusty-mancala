@@ -216,6 +216,17 @@ fn list_active_users() -> Msg {
     }
 }
 
+#[test]
+fn test_list_active_users() {
+    let active_users = list_active_users();
+    assert_eq!(active_users.status, Status::Ok);
+    assert_eq!(active_users.headers, Headers::Read);
+    assert_eq!(active_users.command, Commands::ListUsers);
+    assert_eq!(active_users.game_status, GameStatus::NotInGame);
+    assert_eq!(active_users.data, String::new());
+    assert_eq!(active_users.game_state, GameState::new_empty());
+}
+
 // --------------- write functions --------------- //
 
 /// Creates a message, given a game id, asking the server
@@ -298,6 +309,17 @@ pub fn client_initiate_disconnect() -> Msg {
         data: String::new(),
         game_state: GameState::new_empty(),
     }
+}
+
+#[test]
+fn test_client_init_disconnect() {
+    let client_disconnect = client_initiate_disconnect();
+    assert_eq!(client_disconnect.status, Status::Ok);
+    assert_eq!(client_disconnect.headers, Headers::Read);
+    assert_eq!(client_disconnect.command, Commands::KillMe);
+    assert_eq!(client_disconnect.game_status, GameStatus::NotInGame);
+    assert_eq!(client_disconnect.data, String::new());
+    assert_eq!(client_disconnect.game_state, GameState::new_empty());
 }
 
 // --------------- in game --------------- //
