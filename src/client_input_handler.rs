@@ -193,6 +193,17 @@ fn list_available_games() -> Msg {
     }
 }
 
+#[test]
+fn test_list_available_games() {
+    let available_games = list_available_games();
+    assert_eq!(available_games.status, Status::Ok);
+    assert_eq!(available_games.headers, Headers::Read);
+    assert_eq!(available_games.command, Commands::ListGames);
+    assert_eq!(available_games.game_status, GameStatus::NotInGame);
+    assert_eq!(available_games.data, String::new());
+    assert_eq!(available_games.game_state, GameState::new_empty());
+}
+
 fn list_active_users() -> Msg {
     print!("{}[2J", 27 as char);
     Msg {
