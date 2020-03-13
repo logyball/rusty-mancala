@@ -550,6 +550,17 @@ pub fn leave_game() -> Msg {
     }
 }
 
+#[test]
+fn test_leave_game() {
+    let leave_game_msg = leave_game();
+    assert_eq!(leave_game_msg.status, Status::Ok);
+    assert_eq!(leave_game_msg.headers, Headers::Write);
+    assert_eq!(leave_game_msg.command, Commands::LeaveGame);
+    assert_eq!(leave_game_msg.game_status, GameStatus::InGame);
+    assert_eq!(leave_game_msg.data, String::new());
+    assert_eq!(leave_game_msg.game_state, GameState::new_empty());
+}
+
 // --------------- handle server response --------------- //
 pub fn handle_server_response(
     server_msg: &Msg,
