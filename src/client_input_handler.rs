@@ -517,6 +517,7 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
     }
 }
 
+#[cfg_attr(tarpaulin, skip)]
 fn render_board(board: &[u8; BOARD_LENGTH], am_i_player_one: bool) {
     let range_top = if am_i_player_one {
         Range {
