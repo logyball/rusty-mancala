@@ -623,15 +623,15 @@ fn get_move_to_make_input(am_i_player_one: bool, cur_game_state: &GameState) -> 
             println!("Invalid move entered!");
             move_to_make = String::new();
             continue;
-        }
-
-        if check_is_move_valid(
-            move_to_make.parse::<usize>().unwrap(),
-            &cur_game_state,
-            am_i_player_one,
-        ) {
-            final_move = move_to_make.parse::<usize>().unwrap();
-            break;
+        } else {
+            if check_is_move_valid(
+                move_to_make.trim().parse::<usize>().unwrap(),
+                &cur_game_state,
+                am_i_player_one,
+            ) {
+                final_move = move_to_make.trim().parse::<usize>().unwrap();
+                break;
+            }
         }
     }
     final_move
