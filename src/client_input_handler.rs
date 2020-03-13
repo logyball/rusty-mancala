@@ -18,6 +18,7 @@ pub fn initial_screen() -> String {
 }
 
 /// Collect the "host" field of the connection string from client
+#[cfg_attr(tarpaulin, skip)]
 fn get_host_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -57,6 +58,7 @@ fn test_verify_valid_host() {
 }
 
 /// Collect the "port" field of the connection string from client
+#[cfg_attr(tarpaulin, skip)]
 fn get_port_input() -> u32 {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -124,6 +126,7 @@ fn test_initial_hello_msg() {
 }
 
 /// Handle when a user is out of a game
+#[cfg_attr(tarpaulin, skip)]
 pub fn get_out_of_game_selection(connection: &str, user_nick: &str) -> u8 {
     let stdin = io::stdin();
     let mut selection = String::new();
@@ -192,6 +195,7 @@ fn test_handle_out_of_game() {
     assert_eq!(selection, list_active_users());
 }
 
+#[cfg_attr(tarpaulin, skip)]
 fn display_menu(connection: &str, user_nick: &str) {
     let mut stdout = io::stdout();
     print!(
