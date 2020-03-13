@@ -1,3 +1,4 @@
+#[cfg_attr(tarpaulin, skip)]
 use crate::client_input_handler::*;
 use crate::constants::*;
 use crate::proto::*;

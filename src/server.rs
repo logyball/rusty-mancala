@@ -1,3 +1,4 @@
+#[cfg_attr(tarpaulin, skip)]
 use crate::client_input_handler::{client_initiate_disconnect, leave_game};
 use crate::game_objects::*;
 use crate::proto::*;
