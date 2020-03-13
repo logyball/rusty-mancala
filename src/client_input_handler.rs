@@ -471,7 +471,10 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     if (am_i_player_one && server_msg.game_state.player_one_turn)
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
-        make_move(am_i_player_one, &server_msg.game_state)
+        make_move(get_move_to_make_input(
+            am_i_player_one,
+            &server_msg.game_state,
+        ))
     } else {
         println!("\n\n\tWaiting for my turn...\n\n\n");
         wait_for_my_turn()
@@ -599,14 +602,13 @@ fn test_valid_move() {
     assert!(check_is_move_valid(move_to_make, &gs, player_one));
 }
 
-/// Loop to collect the slot to move from the player, validate it for a "legal" move,
-/// then send off to the server for processing
-fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
+#[cfg_attr(tarpaulin, skip)]
+fn get_move_to_make_input(am_i_player_one: bool, cur_game_state: &GameState) -> usize {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let final_move: usize;
+    let mut move_to_make = String::new();
     loop {
-        let mut move_to_make = String::new();
         if am_i_player_one {
             println!("Player 1, enter your move (1 - 6)");
         } else {
@@ -616,27 +618,56 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
         stdin
             .read_line(&mut move_to_make)
             .expect("Error reading in");
-        let move_to_make_int: usize;
-        match move_to_make.trim().parse() {
-            Ok(x) => {
-                move_to_make_int = x;
-            }
-            Err(e) => {
-                println!("invalid integer + {}!", e);
-                continue;
-            }
+
+        if !verify_move_to_make(move_to_make.trim()) {
+            println!("Invalid move entered!");
+            move_to_make = String::new();
+            continue;
         }
-        if check_is_move_valid(move_to_make_int, cur_game_state, am_i_player_one) {
-            final_move = move_to_make_int;
+
+        if check_is_move_valid(
+            move_to_make.parse::<usize>().unwrap(),
+            &cur_game_state,
+            am_i_player_one,
+        ) {
+            final_move = move_to_make.parse::<usize>().unwrap();
             break;
         }
     }
+    final_move
+}
+
+fn verify_move_to_make(move_to_make: &str) -> bool {
+    match move_to_make.parse::<usize>() {
+        Ok(_) => true,
+        Err(e) => {
+            println!("could not make move into an int: {}!", e);
+            false
+        }
+    }
+}
+
+#[test]
+fn test_verify_invalid_move_to_make() {
+    let invalid_move = String::from("12k");
+    assert!(!verify_move_to_make(&invalid_move));
+}
+
+#[test]
+fn test_verify_valid_move_to_make() {
+    let valid_move = String::from("1234");
+    assert!(verify_move_to_make(&valid_move));
+}
+
+/// Loop to collect the slot to move from the player, validate it for a "legal" move,
+/// then send off to the server for processing
+fn make_move(move_to_make: usize) -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
         command: Commands::MakeMove,
         game_status: GameStatus::InGame,
-        data: final_move.to_string(),
+        data: move_to_make.to_string(),
         game_state: GameState::new_empty(),
     }
 }
