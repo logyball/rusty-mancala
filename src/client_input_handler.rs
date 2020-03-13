@@ -187,7 +187,7 @@ pub fn handle_out_of_game(selection: u8) -> Msg {
         2 => list_available_games(),
         3 => list_active_users(),
         4 => start_new_game(),
-        5 => join_game(),
+        5 => join_game(get_join_game_input()),
         _ => client_initiate_disconnect(),
     }
 }
@@ -271,28 +271,51 @@ fn test_list_active_users() {
 
 // --------------- write functions --------------- //
 
-/// Creates a message, given a game id, asking the server
-/// to add a player to a game
-fn join_game() -> Msg {
+#[cfg_attr(tarpaulin, skip)]
+fn get_join_game_input() -> usize {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let game_id: usize;
+    let mut game_id = String::new();
     loop {
-        let mut game_id_input = String::new();
         print!("Which Game ID do you want to join: ");
         stdout.flush().expect("Client input something nonsensical");
-        stdin.read_line(&mut game_id_input).expect("I/O error");
-        match game_id_input.trim().parse() {
-            Ok(x) => {
-                game_id = x;
-                break;
-            }
-            Err(e) => {
-                println!("invalid integer + {}!", e);
-                continue;
-            }
+        stdin.read_line(&mut game_id).expect("I/O error");
+
+        if !verify_join_game(&game_id) {
+            println!("Invalid game id entered!");
+            game_id = String::new();
+            continue;
+        }
+        break;
+    }
+    game_id.trim().parse::<usize>().unwrap()
+}
+
+fn verify_join_game(game_id: &str) -> bool {
+    match game_id.trim().parse::<u32>() {
+        Ok(_) => true,
+        Err(e) => {
+            println!("could not make game id into an int: {}!", e);
+            false
         }
     }
+}
+
+#[test]
+fn test_verify_invalid_join_game() {
+    let invalid_game = String::from("12k");
+    assert!(!verify_join_game(&invalid_game));
+}
+
+#[test]
+fn test_verify_valid_join_game() {
+    let valid_game = String::from("1234");
+    assert!(verify_join_game(&valid_game));
+}
+
+/// Creates a message, given a game id, asking the server
+/// to add a player to a game
+fn join_game(game_id: usize) -> Msg {
     print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
@@ -302,6 +325,18 @@ fn join_game() -> Msg {
         data: game_id.to_string(),
         game_state: GameState::new_empty(),
     }
+}
+
+#[test]
+fn test_join_game() {
+    let game_id: usize = 0;
+    let join_game_msg = join_game(game_id);
+    assert_eq!(join_game_msg.status, Status::Ok);
+    assert_eq!(join_game_msg.headers, Headers::Write);
+    assert_eq!(join_game_msg.command, Commands::JoinGame);
+    assert_eq!(join_game_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(join_game_msg.data, game_id.to_string());
+    assert_eq!(join_game_msg.game_state, GameState::new_empty());
 }
 
 /// Creates a message to ask the server to change the clients current nickname
