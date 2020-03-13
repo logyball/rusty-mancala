@@ -190,7 +190,7 @@ pub fn handle_out_of_game(selection: u8) -> Msg {
         1 => set_nickname(get_nickname_input()),
         2 => list_available_games(),
         3 => list_active_users(),
-        4 => start_new_game(),
+        4 => start_new_game(get_new_game_input()),
         5 => join_game(get_join_game_input()),
         _ => client_initiate_disconnect(),
     }
@@ -343,6 +343,7 @@ fn test_join_game() {
     assert_eq!(join_game_msg.game_state, GameState::new_empty());
 }
 
+#[cfg_attr(tarpaulin, skip)]
 fn get_nickname_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -351,7 +352,7 @@ fn get_nickname_input() -> String {
     print!("Enter new nickname: ");
     stdout.flush().expect("Client input something nonsensical");
     stdin.read_line(&mut nickname).expect("I/O error");
-    nickname
+    nickname.trim().to_string()
 }
 
 /// Creates a message to ask the server to change the clients current nickname
@@ -362,7 +363,7 @@ fn set_nickname(nickname: String) -> Msg {
         headers: Headers::Write,
         command: Commands::SetNick,
         game_status: GameStatus::NotInGame,
-        data: nickname.trim().to_string(),
+        data: nickname,
         game_state: GameState::new_empty(),
     }
 }
@@ -379,23 +380,40 @@ fn test_set_nickname() {
     assert_eq!(set_nickname_msg.game_state, GameState::new_empty());
 }
 
-/// Creates a message to ask the server to start a new game as well as add the client to the game
-pub fn start_new_game() -> Msg {
+#[cfg_attr(tarpaulin, skip)]
+fn get_new_game_input() -> String {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut game_name = String::new();
     print!("Enter a name of a new game: ");
     stdout.flush().expect("Error flushing buffer");
     stdin.read_line(&mut game_name).expect("Error reading in");
+    game_name.trim().to_string()
+}
+
+/// Creates a message to ask the server to start a new game as well as add the client to the game
+pub fn start_new_game(game_name: String) -> Msg {
     print!("{}[2J", 27 as char);
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
         command: Commands::MakeNewGame,
         game_status: GameStatus::NotInGame,
-        data: game_name.trim().to_string(),
+        data: game_name,
         game_state: GameState::new_empty(),
     }
+}
+
+#[test]
+fn test_start_new_game() {
+    let game_name: String = String::from("game_one");
+    let start_new_game_msg = start_new_game(game_name);
+    assert_eq!(start_new_game_msg.status, Status::Ok);
+    assert_eq!(start_new_game_msg.headers, Headers::Write);
+    assert_eq!(start_new_game_msg.command, Commands::MakeNewGame);
+    assert_eq!(start_new_game_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(start_new_game_msg.data, String::from("game_one"));
+    assert_eq!(start_new_game_msg.game_state, GameState::new_empty());
 }
 
 pub fn client_initiate_disconnect() -> Msg {
