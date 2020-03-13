@@ -43,7 +43,7 @@ pub fn get_host_input() -> String {
 }
 
 fn verify_host(hostname: String) -> bool {
-    !hostname.contains(' ') && !hostname.is_empty()
+    !hostname.contains(' ') && !hostname.is_empty() && !hostname.contains(':')
 }
 
 #[test]
@@ -52,6 +52,8 @@ fn test_verify_invalid_host() {
     assert!(!verify_host(invalid_host));
     invalid_host = String::from("with space");
     assert!(!verify_host(invalid_host));
+    invalid_host = String::from("with:colon");
+    assert!(!verify_host(invalid_host));
 }
 
 #[test]
@@ -59,6 +61,8 @@ fn test_verify_valid_host() {
     let mut valid_host = String::from("localhost");
     assert!(verify_host(valid_host));
     valid_host = String::from("0.0.0.0");
+    assert!(verify_host(valid_host));
+    valid_host = String::from("ec2-52-11-55-180.us-west-2.compute.amazonaws.com");
     assert!(verify_host(valid_host));
 }
 
