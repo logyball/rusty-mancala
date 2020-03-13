@@ -125,8 +125,6 @@ fn test_initial_hello_msg() {
 
 /// Handle when a user is out of a game
 pub fn get_out_of_game_selection(connection: &str, user_nick: &str) -> u8 {
-    display_menu(connection, user_nick);
-
     let stdin = io::stdin();
     let mut selection = String::new();
 
@@ -159,6 +157,22 @@ fn verify_selection(selection: &str) -> bool {
     }
 }
 
+#[test]
+fn test_verify_invalid_selection() {
+    let mut invalid_selection = String::from("invalid");
+    assert!(!verify_selection(&invalid_selection));
+    invalid_selection = String::from("8");
+    assert!(!verify_selection(&invalid_selection));
+}
+
+#[test]
+fn test_verify_valid_selection() {
+    let mut valid_selection = String::from("6");
+    assert!(verify_selection(&valid_selection));
+    valid_selection = String::from("1");
+    assert!(verify_selection(&valid_selection));
+}
+
 pub fn handle_out_of_game(selection: u8) -> Msg {
     match selection {
         1 => set_nickname(),
@@ -166,21 +180,16 @@ pub fn handle_out_of_game(selection: u8) -> Msg {
         3 => list_active_users(),
         4 => start_new_game(),
         5 => join_game(),
-        6 => client_initiate_disconnect(),
-        _ => default_msg(),
+        _ => client_initiate_disconnect(),
     }
 }
 
-fn default_msg() -> Msg {
-    print!("{}[2J", 27 as char);
-    Msg {
-        status: Status::Ok,
-        headers: Headers::Read,
-        command: Commands::InitSetup,
-        game_status: GameStatus::NotInGame,
-        data: String::new(),
-        game_state: GameState::new_empty(),
-    }
+#[test]
+fn test_handle_out_of_game() {
+    let mut selection = handle_out_of_game(2);
+    assert_eq!(selection, list_available_games());
+    selection = handle_out_of_game(3);
+    assert_eq!(selection, list_active_users());
 }
 
 fn display_menu(connection: &str, user_nick: &str) {
