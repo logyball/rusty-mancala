@@ -606,9 +606,9 @@ fn test_valid_move() {
 fn get_move_to_make_input(am_i_player_one: bool, cur_game_state: &GameState) -> usize {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let final_move: usize;
-    let mut move_to_make = String::new();
+    let mut move_to_make: String;
     loop {
+        move_to_make = String::new();
         if am_i_player_one {
             println!("Player 1, enter your move (1 - 6)");
         } else {
@@ -618,30 +618,27 @@ fn get_move_to_make_input(am_i_player_one: bool, cur_game_state: &GameState) -> 
         stdin
             .read_line(&mut move_to_make)
             .expect("Error reading in");
-
         if !verify_move_to_make(move_to_make.trim()) {
             println!("Invalid move entered!");
-            move_to_make = String::new();
             continue;
-        } else {
-            if check_is_move_valid(
-                move_to_make.trim().parse::<usize>().unwrap(),
-                &cur_game_state,
-                am_i_player_one,
-            ) {
-                final_move = move_to_make.trim().parse::<usize>().unwrap();
-                break;
-            }
+        } else if check_is_move_valid(
+            move_to_make.trim().parse::<usize>().unwrap(),
+            &cur_game_state,
+            am_i_player_one,
+        ) {
+            break;
         }
     }
-    final_move
+    move_to_make.trim().parse::<usize>().unwrap()
 }
 
 fn verify_move_to_make(move_to_make: &str) -> bool {
+    let mut stdout = io::stdout();
     match move_to_make.parse::<usize>() {
         Ok(_) => true,
         Err(e) => {
             println!("could not make move into an int: {}!", e);
+            stdout.flush().expect("Error flushing buffer");
             false
         }
     }
