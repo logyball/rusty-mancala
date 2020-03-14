@@ -471,11 +471,49 @@ pub fn handle_in_game(server_msg: &Msg, my_id: u32) -> Msg {
     if (am_i_player_one && server_msg.game_state.player_one_turn)
         || (!am_i_player_one && !server_msg.game_state.player_one_turn)
     {
-        make_move(am_i_player_one, &server_msg.game_state)
+        make_move(get_move_to_make_input(
+            am_i_player_one,
+            &server_msg.game_state,
+        ))
     } else {
         println!("\n\n\tWaiting for my turn...\n\n\n");
         wait_for_my_turn()
     }
+}
+
+#[test]
+fn test_handle_in_game_status_not_ok() {
+    let server_msg = Msg {
+        status: Status::NotOk,
+        headers: Headers::Write,
+        command: Commands::ListGames,
+        game_status: GameStatus::NotInGame,
+        data: String::new(),
+        game_state: GameState::new_empty(),
+    };
+    let my_id: u32 = 0;
+    let handler_msg = handle_in_game(&server_msg, my_id);
+    assert_eq!(handler_msg.status, Status::Ok);
+    assert_eq!(handler_msg.headers, Headers::Read);
+    assert_eq!(handler_msg.command, Commands::KillMe);
+    assert_eq!(handler_msg.game_status, GameStatus::NotInGame);
+    assert_eq!(handler_msg.data, String::new());
+    assert_eq!(handler_msg.game_state, GameState::new_empty());
+}
+
+#[test]
+fn test_handle_in_game_with_game_over() {
+    let server_msg = Msg {
+        status: Status::Ok,
+        headers: Headers::Write,
+        command: Commands::GameIsOver,
+        game_status: GameStatus::InGame,
+        data: String::new(),
+        game_state: GameState::new_empty(),
+    };
+    let my_id: u32 = 0;
+    let handler_msg = handle_in_game(&server_msg, my_id);
+    assert_eq!(handler_msg, leave_game());
 }
 
 fn get_current_gamestate() -> Msg {
@@ -501,9 +539,20 @@ fn test_get_current_gamestate() {
 }
 
 fn wait_for_my_turn() -> Msg {
-    let two_sec = time::Duration::from_secs(4);
+    let two_sec = time::Duration::from_secs(2);
     thread::sleep(two_sec);
     get_current_gamestate()
+}
+
+#[test]
+fn test_wait_for_my_turn() {
+    let wait_msg = wait_for_my_turn();
+    assert_eq!(wait_msg.status, Status::Ok);
+    assert_eq!(wait_msg.headers, Headers::Read);
+    assert_eq!(wait_msg.command, Commands::GetCurrentGamestate);
+    assert_eq!(wait_msg.game_status, GameStatus::InGame);
+    assert_eq!(wait_msg.data, String::new());
+    assert_eq!(wait_msg.game_state, GameState::new_empty());
 }
 
 /// Helper function to decide if the current game state allows the requested move, otherwise
@@ -553,14 +602,13 @@ fn test_valid_move() {
     assert!(check_is_move_valid(move_to_make, &gs, player_one));
 }
 
-/// Loop to collect the slot to move from the player, validate it for a "legal" move,
-/// then send off to the server for processing
-fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
+#[cfg_attr(tarpaulin, skip)]
+fn get_move_to_make_input(am_i_player_one: bool, cur_game_state: &GameState) -> usize {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    let final_move: usize;
+    let mut move_to_make: String;
     loop {
-        let mut move_to_make = String::new();
+        move_to_make = String::new();
         if am_i_player_one {
             println!("Player 1, enter your move (1 - 6)");
         } else {
@@ -570,27 +618,53 @@ fn make_move(am_i_player_one: bool, cur_game_state: &GameState) -> Msg {
         stdin
             .read_line(&mut move_to_make)
             .expect("Error reading in");
-        let move_to_make_int: usize;
-        match move_to_make.trim().parse() {
-            Ok(x) => {
-                move_to_make_int = x;
-            }
-            Err(e) => {
-                println!("invalid integer + {}!", e);
-                continue;
-            }
-        }
-        if check_is_move_valid(move_to_make_int, cur_game_state, am_i_player_one) {
-            final_move = move_to_make_int;
+        if !verify_move_to_make(move_to_make.trim()) {
+            println!("Invalid move entered!");
+            continue;
+        } else if check_is_move_valid(
+            move_to_make.trim().parse::<usize>().unwrap(),
+            &cur_game_state,
+            am_i_player_one,
+        ) {
             break;
         }
     }
+    move_to_make.trim().parse::<usize>().unwrap()
+}
+
+fn verify_move_to_make(move_to_make: &str) -> bool {
+    let mut stdout = io::stdout();
+    match move_to_make.parse::<usize>() {
+        Ok(_) => true,
+        Err(e) => {
+            println!("could not make move into an int: {}!", e);
+            stdout.flush().expect("Error flushing buffer");
+            false
+        }
+    }
+}
+
+#[test]
+fn test_verify_invalid_move_to_make() {
+    let invalid_move = String::from("12k");
+    assert!(!verify_move_to_make(&invalid_move));
+}
+
+#[test]
+fn test_verify_valid_move_to_make() {
+    let valid_move = String::from("1234");
+    assert!(verify_move_to_make(&valid_move));
+}
+
+/// Loop to collect the slot to move from the player, validate it for a "legal" move,
+/// then send off to the server for processing
+fn make_move(move_to_make: usize) -> Msg {
     Msg {
         status: Status::Ok,
         headers: Headers::Write,
         command: Commands::MakeMove,
         game_status: GameStatus::InGame,
-        data: final_move.to_string(),
+        data: move_to_make.to_string(),
         game_state: GameState::new_empty(),
     }
 }
