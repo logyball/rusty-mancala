@@ -28,13 +28,13 @@ is mostly an exercise to learn the Rust programming language and TCP communicati
 3. Enter localhost and the port number you specified earlier
 4. Repeat step 2-3 with more terminal windows
 
-##### To Run Against our Cloud Deployment
+~~##### To Run Against our Cloud Deployment~~
 
-1. In a terminal, run the client
-   - `$ ./release/rusty-mancala{.exe}`
-2. Enter host: `ec2-52-11-55-180.us-west-2.compute.amazonaws.com`
-3. Enter port: `4567`
-4. Look for a game, change your nickname, or start your own game!
+~~1. In a terminal, run the client~~
+   ~~- `$ ./release/rusty-mancala{.exe}`~~
+~~2. Enter host: `ec2-52-11-55-180.us-west-2.compute.amazonaws.com`~~
+~~3. Enter port: `4567`~~
+~~4. Look for a game, change your nickname, or start your own game!~~
 
 ##### Notes on Cargo Run
 
@@ -319,10 +319,10 @@ New Nickname Server Error Response:
 }
 ```
 
-### Deployment
+~~### Deployment~~
 
-Server is deployed on AWS. Connect by building the client, and connecting to host
-`ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.
+~~Server is deployed on AWS. Connect by building the client, and connecting to host
+`ec2-52-11-55-180.us-west-2.compute.amazonaws.com` on port `4567`.~~
 
 ## Testing
 
